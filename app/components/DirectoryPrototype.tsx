@@ -173,8 +173,8 @@ function coerceCare(raw: any, fallbackLabel?: string): CareItem & { kindLabel?: 
 
   const service =
     serviceJP || fromSlug ||
-    raw.service ?? raw.service_type ?? raw.category ??
-    fallbackLabel ?? "";
+    raw.service || raw.service_type || raw.category ||
+    fallbackLabel || "";
 
   const tel = normalizeTel(
     raw.tel ?? raw.phone ?? raw.tel_no ?? raw["電話"] ?? raw["TEL"] ?? ""
