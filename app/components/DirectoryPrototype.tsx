@@ -269,7 +269,11 @@ const HEALTH_CATEGORY_MAP = {
   "薬局":      { dir: "pharmacy" },
 } as const;
 
-// 「診療科セレクタを出す対象のカテゴリ」だけを真にする
+const MED_CATEGORIES = ["病院","クリニック","歯科","薬局"] as const;
+type MedCategory = typeof MED_CATEGORIES[number];
+const isMedCategory = (c: string): c is MedCategory =>
+  (MED_CATEGORIES as readonly string[]).includes(c);
+
 type DeptCategory = "病院" | "クリニック" | "歯科";
 const isDeptCategory = (c: string): c is DeptCategory =>
   c === "病院" || c === "クリニック" || c === "歯科";
@@ -767,17 +771,19 @@ export default function DirectoryPrototype() {
 
   // 医療カテゴリを選んだら /public/data/medical/<dir>/<pref>.json を取得
   useEffect(() => {
-    const m = HEALTH_CATEGORY_MAP[category];
-    if (!pref || !m) { setHealthItems(null); return; }
+    // まず型ガードで医療カテゴリに限定（薬局も含む）
+    if (!pref || !isMedCategory(category)) {
+      setHealthItems(null);
+      return;
+    }
+    const m = HEALTH_CATEGORY_MAP[category]; // ここで category は MedCategory に絞られている
 
     const url = `/data/medical/${m.dir}/${encodeURIComponent(pref)}.json`;
     fetch(url, { cache: "no-store" })
       .then(r => r.ok ? r.json() : [])
       .then((arr: any[]) => {
-        // 正規化
         let list: HealthItem[] = arr.map(row => coerceHealth(row, m.dir));
 
-        // 市区町村で絞り込み
         if (city) {
           const want = normalizeCity(city);
           list = list.filter(a =>
@@ -786,7 +792,6 @@ export default function DirectoryPrototype() {
           );
         }
 
-        // ★診療科で絞り込み（選択されているときだけ）
         if (dept) {
           list = list.filter(a => (a.departments || []).some(d => d.includes(dept)));
         }
@@ -794,7 +799,7 @@ export default function DirectoryPrototype() {
         setHealthItems(list);
       })
       .catch(() => setHealthItems([]));
-  }, [pref, city, category, dept]); // ← dept を追加
+  }, [pref, city, category, dept]);
 
   // 「全て」= 医療(4種) + 介護(全種) を合体表示
   useEffect(() => {
