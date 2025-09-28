@@ -262,12 +262,17 @@ type HealthItem = {
 };
 
 // これで固定。診療科はここでは持たない
-const HEALTH_CATEGORY_MAP: Record<string, { dir: "hospital"|"clinic"|"dental"|"pharmacy" }> = {
+const HEALTH_CATEGORY_MAP = {
   "病院":      { dir: "hospital" },
-  "クリニック":{ dir: "clinic" },
-  "歯科":      { dir: "dental" },
+  "クリニック":{ dir: "clinic"   },
+  "歯科":      { dir: "dental"   },
   "薬局":      { dir: "pharmacy" },
-};
+} as const;
+
+// 「診療科セレクタを出す対象のカテゴリ」だけを真にする
+type DeptCategory = "病院" | "クリニック" | "歯科";
+const isDeptCategory = (c: string): c is DeptCategory =>
+  c === "病院" || c === "クリニック" || c === "歯科";
 
 // 診療科のドロップダウン候補
 const DEPT_OPTIONS: Record<"hospital"|"clinic"|"dental", string[]> = {
@@ -913,7 +918,7 @@ export default function DirectoryPrototype() {
         <AccordionMobile id="category" openId={openId} setOpenId={setOpenId} title="業種から探す">
           <CategoryPicker category={category} setCategory={setCategory} />
 
-          {["病院","クリニック","歯科"].includes(category) && (
+          {isDeptCategory(category) && (
             <div className="mt-3">
               <DeptPicker
                 dir={HEALTH_CATEGORY_MAP[category].dir}
