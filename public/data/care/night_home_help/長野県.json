@@ -1,0 +1,46 @@
+[
+  {
+    "id": "2090300142",
+    "name": "24時間型ホームヘルパーステーションアザレアン",
+    "kana": "ニジュウヨジカンガタホームヘルパーステーションアザレアン",
+    "address": "上田市真田町長7329－4サービス付き高齢者向け住宅アザレアン内 サービス付き高齢者向け住宅アザレアン内",
+    "lat": 36.4433633615073,
+    "lng": 138.307784721179,
+    "tel": "0268-75－1203",
+    "url": "http://www.azarean.jp",
+    "pref": "長野県",
+    "city": "上田市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "なし"
+  },
+  {
+    "id": "2090500386",
+    "name": "定期巡回ステーションOneMade",
+    "kana": "テイキジュンカイステーションワンメイド",
+    "address": "長野県飯田市八幡町2038-2",
+    "lat": 35.4971597,
+    "lng": 137.8392182,
+    "tel": "0265-54-0010",
+    "url": "https://www.mirai-no-kurashi.online/",
+    "pref": "長野県",
+    "city": "飯田市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

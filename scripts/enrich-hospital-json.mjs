@@ -21,13 +21,24 @@ const csvRoot  = path.resolve(process.argv[3] ?? path.join(process.cwd(), "data/
 const readJSON = async (p) => JSON.parse(await fs.readFile(p, "utf8"));
 const writeJSON = async (p, obj) => fs.writeFile(p, JSON.stringify(obj, null, 2), "utf8");
 
-const normTel = (s="") =>
-  s.replace(/[‐-‒–—―ー－]/g, "-")
-   .replace(/[^\d\-+]/g, "")
-   .replace(/-+/g, "-")
-   .replace(/^-|-$/g, "");
-
-const looksLikeTel = (s="") => /(\+?\d{2,4}-\d{2,4}-\d{3,4}|\d{9,12})/.test(normTel(s));
+const toAscii = (s) => (s ?? '').toString().normalize('NFKC').trim();
+const digitsOnly = (s) => toAscii(s).replace(/[^\d]/g, '');
+function normTel(s="") {
+  return toAscii(s).replace(/[‐-‒–—―ー－]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+function looksLikeTel(s="") {
+  const t = toAscii(s);
+  const d = digitsOnly(t);
+  if ((d.length === 10 || d.length === 11) && d.startsWith('0')) return true; // 0始まり10/11桁のみ
+  return /0\d{1,4}-\d{2,4}-\d{3,4}/.test(t);
+}
+function formatJPPhone(raw="") {
+  const d = digitsOnly(raw);
+  if (!(d.startsWith('0') && (d.length === 10 || d.length === 11))) return '';
+  if (d.length === 10 && (d.startsWith('03') || d.startsWith('06'))) return `${d.slice(0,2)}-${d.slice(2,6)}-${d.slice(6)}`;
+  if (d.length === 10) return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  return `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
+}
 const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
 
 const extractCity = (address="", pref="") => {
@@ -84,7 +95,8 @@ const buildMaps = async () => {
       // 施設CSVに電話が入っていればフォールバックで拾う
       const allCells = (Array.isArray(r) ? r : Object.values(r)).map(v => String(v ?? "").trim());
       const telFromInfo = allCells.find(looksLikeTel);
-      if (telFromInfo && !telMap.has(id)) telMap.set(id, normTel(telFromInfo));
+      const formatted = formatJPPhone(telFromInfo || "");
+      if (formatted && !telMap.has(id)) telMap.set(id, formatted);
     }
   }
 
@@ -102,8 +114,8 @@ const buildMaps = async () => {
       const id = String((Array.isArray(r) ? r[0] : r.id) ?? "").trim();
       if (!id) continue;
       const cand = (Array.isArray(r) ? r : Object.values(r)).map(v => String(v ?? "").trim());
-      const tel = normTel(cand.find(looksLikeTel) || "");
-      if (tel) telMap.set(id, tel);
+      const formatted = formatJPPhone(cand.find(looksLikeTel) || "");
+      if (formatted) telMap.set(id, formatted);
     }
   }
 
@@ -168,8 +180,25 @@ const main = async () => {
       if (c) { item.city = c; patchedCity++; }
     }
 
-    const tel = telMap.get(id);
-    if (!item.tel && tel) { item.tel = tel; patchedTel++; }
+    {
+      const cur = String(item.tel ?? "");
+      const fmt = formatJPPhone(cur);      // 03/06は2-4-4、それ以外は3-3-4等に整形。10/11桁以外は空
+
+      if (cur && !fmt) {
+        // 既存値が「1311132…」のような誤値（ID混入など）のケースは捨てる
+        item.tel = "";
+      } else if (fmt) {
+        // 正常なら整形済みで上書き
+        item.tel = fmt;
+      }
+
+      // まだ空ならCSV由来のtelMapで補完
+      const fromMap = telMap.get(id);
+      if (!item.tel && fromMap) {
+        item.tel = fromMap;
+        patchedTel++;
+      }
+    }
 
     const depts = deptMap.get(id);
     if (depts && depts.size) {

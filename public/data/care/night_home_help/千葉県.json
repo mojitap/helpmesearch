@@ -1,0 +1,112 @@
+[
+  {
+    "id": "1299100022",
+    "name": "第二松丘園ケア・サポート",
+    "kana": "ダイニショウキュウエンケア・サポート",
+    "address": "千葉県山武郡横芝光町宮川12103-1",
+    "lat": 35.6577655,
+    "lng": 140.5039851,
+    "tel": "0479-84-3969",
+    "url": "https://www.99-home.com/",
+    "pref": "千葉県",
+    "city": "横芝光町",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "1293000053",
+    "name": "夜間対応型訪問介護事業所つばさ",
+    "kana": "ヤカンタイオウガタホウモンカイゴジギョウショツバサ",
+    "address": "千葉県君津市郡２－７－１０",
+    "lat": 35.3072319702288,
+    "lng": 139.914455153265,
+    "tel": "０４３９（５５）１２７１",
+    "url": "https://tsubasa-shishinkai.com/",
+    "pref": "千葉県",
+    "city": "君津市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "年中無休"
+  },
+  {
+    "id": "1290800018",
+    "name": "一般財団法人　市川市福祉公社",
+    "kana": "イッパンザイダンホウジン　イチカワシフクシコウシャ",
+    "address": "千葉県市川市市川南1-1-1ザタワーズイースト209 ザタワーズイースト209",
+    "lat": 35.7282078037346,
+    "lng": 139.908068926459,
+    "tel": "047-313-4070",
+    "url": "http://www.i-fukukou.com",
+    "pref": "千葉県",
+    "city": "市川市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "なし"
+  },
+  {
+    "id": "1292200613",
+    "name": "SOMPOケア地域サービスセンター豊四季　夜間訪問介護",
+    "kana": "ソンポケアチイキサービスセンタートヨシキ　ヤカンホウモンカイゴ",
+    "address": "千葉県柏市豊四季283－1",
+    "lat": 35.8610697050089,
+    "lng": 139.948141419592,
+    "tel": "04－7142－9211",
+    "url": "https://www.sompocare.com/service/zaitaku/teikijunkai/Z000609",
+    "pref": "千葉県",
+    "city": "柏市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "24時間通報対応加算で日中のオペレータへも繋げる。"
+  },
+  {
+    "id": "1292200928",
+    "name": "夜間対応型訪問介護和気あいあい",
+    "kana": "ヤカンタイオウガタホウモンカイゴワキアイアイ",
+    "address": "千葉県柏市松葉町3丁目24-7",
+    "lat": 35.8865318690191,
+    "lng": 139.966169971164,
+    "tel": "04-7189-8536",
+    "url": "https://www.wakiaiai-kaigo.jp/",
+    "pref": "千葉県",
+    "city": "柏市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "1970105142",
+    "name": "医療法人慶友会　城東病院介護医療院",
+    "kana": "イリョウホウジンケイユウカイ　ジョウトウビョウインカイゴイリョウイン",
+    "address": "山梨県甲府市城東4-13-15",
+    "lat": 35.6574981,
+    "lng": 138.5820127,
+    "tel": "055-233-6411",
+    "url": "http://joto-group.com",
+    "pref": "山梨県",
+    "city": "甲府市",
+    "category": "care_medical_institute",
+    "serviceType": "介護医療院",
+    "capacity": 0,
+    "openDays": [],
+    "openDaysNote": ""
+  },
+  {
+    "id": "1910114675",
+    "name": "箭本外科整形外科医院介護医療院",
+    "kana": "ヤモトゲカセイケイゲカイインカイゴイリョウイン",
+    "address": "北口３－１－１",
+    "lat": null,
+    "lng": null,
+    "tel": "０５５－２５３－３５３２",
+    "url": "http://www.yamotogekaseikeigeka.com/",
+    "pref": "山梨県",
+    "city": "甲府市",
+    "category": "care_medical_institute",
+    "serviceType": "介護医療院",
+    "capacity": 0,
+    "openDays": [],
+    "openDaysNote": ""
+  }
+]

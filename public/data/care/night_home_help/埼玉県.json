@@ -1,0 +1,68 @@
+[
+  {
+    "id": "1190900025",
+    "name": "夜間対応型訪問介護　　ケアナイト",
+    "kana": "ヤカンタイオウガタホウモンカイゴ",
+    "address": "埼玉県久喜市青葉４－２４－１８",
+    "lat": 36.0688309,
+    "lng": 139.7012656,
+    "tel": "0480-26-5000",
+    "url": "npo-ikiiki-seikatsu-.com",
+    "pref": "埼玉県",
+    "city": "久喜市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "サービス提供（改行）随時・毎日２４時間３６５日"
+  },
+  {
+    "id": "1190201028",
+    "name": "エイプレイス川口",
+    "kana": "エイプレイスカワグチ",
+    "address": "埼玉県川口市幸町2‐15‐8第Ⅱ福富ビル 第Ⅱ福富ビル",
+    "lat": 35.8065386,
+    "lng": 139.7200802,
+    "tel": "048-240-1355",
+    "url": "https://www.a-place.co.jp",
+    "pref": "埼玉県",
+    "city": "川口市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "定期巡回・随時対応型訪問介護看護と兼務。加算要件によって24時間体制でオペレーターによる電話相談、随時訪問が可能です。"
+  },
+  {
+    "id": "1190200707",
+    "name": "ケアセンターかがやき",
+    "kana": "ケアセンターカガヤキ",
+    "address": "埼玉県川口市西青木5-1-40",
+    "lat": 35.8209302782436,
+    "lng": 139.716072571072,
+    "tel": "048-253-5186",
+    "url": "https://www.mcp-saitama.or.jp/",
+    "pref": "埼玉県",
+    "city": "川口市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

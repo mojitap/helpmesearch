@@ -1,0 +1,53 @@
+[
+  {
+    "id": "04B1100017",
+    "name": "南浜中央病院介護医療院",
+    "kana": "ミナミハマチュウオウビョウインカイゴイリョウイン",
+    "address": "宮城県岩沼市寺島字北新田111番地",
+    "lat": 38.0838904,
+    "lng": 140.9190143,
+    "tel": "0223-36-8875",
+    "url": "https://minamihama.or.jp/",
+    "pref": "宮城県",
+    "city": "岩沼市",
+    "category": "care_medical_institute",
+    "serviceType": "介護医療院",
+    "capacity": 42,
+    "openDays": [],
+    "openDaysNote": ""
+  },
+  {
+    "id": "04B2600015",
+    "name": "介護医療院松島みどりの家",
+    "kana": "カイゴイリョウインマツシマミドリノイエ",
+    "address": "宮城県宮城郡松島町高城字浜1番地26",
+    "lat": 38.3782612,
+    "lng": 141.0701677,
+    "tel": "022-354-2126",
+    "url": "http://www.matushimahosupital.com/kaigoirouin/",
+    "pref": "宮城県",
+    "city": "松島町",
+    "category": "care_medical_institute",
+    "serviceType": "介護医療院",
+    "capacity": 0,
+    "openDays": [],
+    "openDaysNote": ""
+  },
+  {
+    "id": "04B1500018",
+    "name": "古川民主病院介護医療院",
+    "kana": "フルカワミンシュビョウインカイゴイリョウイン",
+    "address": "宮城県大崎市古川駅東2-11-14",
+    "lat": 38.5732346,
+    "lng": 140.9742921,
+    "tel": "0229-23-5521",
+    "url": "http://www.m-kousei.com",
+    "pref": "宮城県",
+    "city": "大崎市",
+    "category": "care_medical_institute",
+    "serviceType": "介護医療院",
+    "capacity": null,
+    "openDays": [],
+    "openDaysNote": ""
+  }
+]

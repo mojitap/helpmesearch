@@ -1,0 +1,68 @@
+[
+  {
+    "id": "2895100135",
+    "name": "ぷらすてっぷ夜間対応型訪問介護",
+    "kana": "プラステップヤカンタイオウガタホウモンカイゴ",
+    "address": "熊内橋通6-1-17",
+    "lat": 34.7043831937154,
+    "lng": 135.199165450926,
+    "tel": "078-222-1557",
+    "url": "https://www.positive-plustep.com/",
+    "pref": "兵庫県",
+    "city": "神戸市中央区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2890100221",
+    "name": "住吉夜間対応型訪問介護センター",
+    "kana": "スミヨシヤカンタイオウガタホウモンカイゴセンター",
+    "address": "兵庫県神戸市東灘区住吉本町3-7-41",
+    "lat": 34.7240393,
+    "lng": 135.2592925,
+    "tel": "078-851-2560",
+    "url": "http://www.krh-sumiyoshi.com/",
+    "pref": "兵庫県",
+    "city": "神戸市東灘区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "ご利用等の相談については9：00～17：30での受付となります。"
+  },
+  {
+    "id": "2890900596",
+    "name": "エイプレイス兵庫西宮",
+    "kana": "エイプレイスヒョウゴニシノミヤ",
+    "address": "兵庫県西宮市段上町1丁目10-28",
+    "lat": 34.7680639,
+    "lng": 135.3634725,
+    "tel": "0798-57-3718",
+    "url": "https://isla-grande.com/",
+    "pref": "兵庫県",
+    "city": "西宮市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

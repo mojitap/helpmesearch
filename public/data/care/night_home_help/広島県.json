@@ -1,0 +1,131 @@
+[
+  {
+    "id": "3490101189",
+    "name": "いでした夜間訪問介護サービス",
+    "kana": "イデシタヤカンホウモンカイゴサービス",
+    "address": "広島県広島市安佐北区口田三丁目30番13号",
+    "lat": 34.4670586,
+    "lng": 132.5006832,
+    "tel": "082-516-8127",
+    "url": "http://www.ideshita-clinic.jp/about",
+    "pref": "広島県",
+    "city": "広島市安佐北区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "3490201096",
+    "name": "ニックス佐伯ヘルパー救急隊",
+    "kana": "ニックスサエキヘルパーキュウキュウタイ",
+    "address": "広島市佐伯区三筋一丁目10-27",
+    "lat": 34.3653563,
+    "lng": 132.3475829,
+    "tel": "082-942-1112",
+    "url": "http://www.nix-net.co.jp/",
+    "pref": "広島県",
+    "city": "広島市佐伯区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "オペレーションセンターサービスは委託にて24時間対応"
+  },
+  {
+    "id": "3490201260",
+    "name": "生協かんおん夜間対応ヘルパーステーション",
+    "kana": "セイキョウカンオンヤカンタイオウヘルパーステーション",
+    "address": "広島県広島市西区観音町16-19生協けんこうプラザ 生協けんこうプラザ",
+    "lat": 34.3945054,
+    "lng": 132.4370749,
+    "tel": "082-563-8391",
+    "url": "http://www.hch.coop/",
+    "pref": "広島県",
+    "city": "広島市西区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "3490201245",
+    "name": "生協くさつ夜間対応ヘルパーステーション",
+    "kana": "セイキョウクサツヤカンタイオウヘルパーステーション",
+    "address": "広島県広島市西区草津東1丁目11-19",
+    "lat": 34.3788256,
+    "lng": 132.4063338,
+    "tel": "082-507-1222",
+    "url": "http://www.hch.coop",
+    "pref": "広島県",
+    "city": "広島市西区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "3490100033",
+    "name": "夜間対応型訪問介護ニックスヘルパー救急隊",
+    "kana": "ヤカンタイオウガタホウモンカイゴニックスヘルパーキュウキュウタイ",
+    "address": "広島市東区尾長東二丁目7番28号",
+    "lat": 34.3980423014479,
+    "lng": 132.488226370675,
+    "tel": "082-568-7300",
+    "url": "http://www.nix-net.co.jp/",
+    "pref": "広島県",
+    "city": "広島市東区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "年中無休"
+  },
+  {
+    "id": "3491501247",
+    "name": "永和会多機能看護介護ステーション",
+    "kana": "エイワカイタキノウカンゴカイゴステーション",
+    "address": "福山市東村町466-2",
+    "lat": 34.4614430626361,
+    "lng": 133.24068711829,
+    "tel": "084-939-9550",
+    "url": "http://www.eiwa-kai.or.jp/index.html",
+    "pref": "広島県",
+    "city": "福山市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 10,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "年中無休です。営業時間以外でも電話等により24時間常時連絡可能な体制を取っています。"
+  }
+]

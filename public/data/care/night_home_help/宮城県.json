@@ -1,0 +1,24 @@
+[
+  {
+    "id": "495500548",
+    "name": "SOMPOケア　仙台泉　夜間訪問介護",
+    "kana": "ソンポケア　センダイイズミ　ヤカンホウモンカイゴ",
+    "address": "宮城県仙台市泉区松森字鹿島53-9",
+    "lat": 38.3181911,
+    "lng": 140.9093373,
+    "tel": "022-771-7362",
+    "url": "https://www.sompocare.com/",
+    "pref": "宮城県",
+    "city": "仙台市泉区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "22：00～翌7：00"
+  }
+]

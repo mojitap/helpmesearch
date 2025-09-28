@@ -1,0 +1,68 @@
+[
+  {
+    "id": "4590101160",
+    "name": "りんくる",
+    "kana": "リンクル",
+    "address": "神宮１－２４０－１オフィスティ第１ビル3-Ａ オフィスティ第１ビル3-Ａ",
+    "lat": 31.9327757,
+    "lng": 131.4213854,
+    "tel": "0985-77-5410",
+    "url": "http://www.spinner-linkle.com",
+    "pref": "宮崎県",
+    "city": "宮崎市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4590100873",
+    "name": "夜間対応サービス　ファンライフ浮之城",
+    "kana": "ヤカンタイオウサービス　ファンライフウキノジョウ",
+    "address": "宮崎県宮崎市吉村町浮之城甲16-1",
+    "lat": 31.9315137152653,
+    "lng": 131.437958859911,
+    "tel": "0985-35-6260",
+    "url": "http://www.altidea.com/",
+    "pref": "宮崎県",
+    "city": "宮崎市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "電話により24時間連絡体制整えております。"
+  },
+  {
+    "id": "4572001164",
+    "name": "ヘルパーステーション　おとんおかんの家",
+    "kana": "ヘルパーステーション　オトンオカンノイエ",
+    "address": "宮崎県児湯郡高鍋町大字北高鍋１０８９番地",
+    "lat": 32.1308392,
+    "lng": 131.5099775,
+    "tel": "0983-35-3531",
+    "url": "https://www.otonokannoie.jp/",
+    "pref": "宮崎県",
+    "city": "高鍋町",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

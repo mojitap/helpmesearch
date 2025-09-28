@@ -1,0 +1,90 @@
+[
+  {
+    "id": "2393100280",
+    "name": "夜間対応型訪問介護オレンジ",
+    "kana": "ヤカンタイオウガタホウモンカイゴオレンジ",
+    "address": "安城市北山崎町大山９－１",
+    "lat": 34.9676691,
+    "lng": 137.1029527,
+    "tel": "0566-71-3401",
+    "url": "http://www.oss-kk.com/",
+    "pref": "愛知県",
+    "city": "安城市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2391300023",
+    "name": "あんしんネットワーク",
+    "kana": "アンシンネットワーク",
+    "address": "愛知県名古屋市守山区金屋二丁目388",
+    "lat": 35.2043008,
+    "lng": 136.9557816,
+    "tel": "052-795-2340",
+    "url": "http://www.tsubame-taxi.or.jp/",
+    "pref": "愛知県",
+    "city": "名古屋市守山区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "２４時間通報対応加算を算定している利用者様については、２４時間対応いたしております。"
+  },
+  {
+    "id": "2390500011",
+    "name": "丸八夜間対応型訪問介護事業所",
+    "kana": "マルハチヤカンタイオウガタホウモンカイゴジギョウショ",
+    "address": "名古屋市中村区西米野町1-76-6",
+    "lat": 35.1663362,
+    "lng": 136.8711432,
+    "tel": "052-481-1915",
+    "url": "http://www.maru8kaigo.com/",
+    "pref": "愛知県",
+    "city": "名古屋市中村区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2391200116",
+    "name": "名古屋夜間介護センター",
+    "kana": "ナゴヤヤカンカイゴセンター",
+    "address": "愛知県名古屋市南区駈上2-9-16桑山ビル201 桑山ビル201",
+    "lat": 35.1111649,
+    "lng": 136.9385137,
+    "tel": "052-829-0678",
+    "url": "yakankaigo.com",
+    "pref": "愛知県",
+    "city": "名古屋市南区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

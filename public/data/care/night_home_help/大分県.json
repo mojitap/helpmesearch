@@ -1,0 +1,134 @@
+[
+  {
+    "id": "4490100536",
+    "name": "夜間対応型ヘルパーステーション清流苑",
+    "kana": "ヤカンタイオウガタヘルパーステーションセイリュウエン",
+    "address": "大分県大分市大字種具字南谷144番地",
+    "lat": 33.2187714,
+    "lng": 131.699326,
+    "tel": "097-524-7102",
+    "url": "https://seiryu-kyousei.org/",
+    "pref": "大分県",
+    "city": "大分市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4490800077",
+    "name": "大久保病院夜間介護センター",
+    "kana": "オオクボビョウインヤカンカイゴゼンター",
+    "address": "大分県竹田市久住町大字栢木6026-2",
+    "lat": 33.0577576,
+    "lng": 131.3323129,
+    "tel": "0974-64-7777",
+    "url": "http://okubo-hp.com/",
+    "pref": "大分県",
+    "city": "竹田市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4490300029",
+    "name": "いずみの園コールセンター",
+    "kana": "イズミノソノコールセンター",
+    "address": "大分県中津市永添2765-147",
+    "lat": 33.5600144297917,
+    "lng": 131.200123374751,
+    "tel": "0979-85-0356",
+    "url": "http//www.izuminosono.jp",
+    "pref": "大分県",
+    "city": "中津市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 100,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4490300169",
+    "name": "中津夜間訪問介護センター",
+    "kana": "ナカツヤカンホウモンカイゴセンター",
+    "address": "大分県中津市豊田町13-6サンビュー20-B号室 サンビュー20-B号室",
+    "lat": 33.5991138533163,
+    "lng": 131.188222084028,
+    "tel": "0979-23-8710",
+    "url": "www.regaroa.net",
+    "pref": "大分県",
+    "city": "中津市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "訪問ｻｰﾋﾞｽは年中無休"
+  },
+  {
+    "id": "4490300292",
+    "name": "夜間訪問サポートセンター三光園",
+    "kana": "ヤカンホウモンサポートセンターサンコウエン",
+    "address": "大分県中津市大字上如水字野田1825番地10",
+    "lat": 33.5786678,
+    "lng": 131.229384,
+    "tel": "0979-53-9755",
+    "url": "",
+    "pref": "大分県",
+    "city": "中津市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4490300326",
+    "name": "夜間訪問介護ステーションLａ　Vie",
+    "kana": "ヤカンホウモンカイゴステーション　ラヴィ",
+    "address": "大分県中津市豊田町13-6サンビュー20-B号室 サンビュー20-B号室",
+    "lat": 33.5990629,
+    "lng": 131.1882535,
+    "tel": "0979-23-8710",
+    "url": "",
+    "pref": "大分県",
+    "city": "中津市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": "訪問サービス中は年中無休"
+  }
+]

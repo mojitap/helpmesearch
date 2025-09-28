@@ -1,0 +1,90 @@
+[
+  {
+    "id": "4093200055",
+    "name": "ケアコールセンターペアレント",
+    "kana": "ケアコールセンターペアレント",
+    "address": "福岡県春日市大谷1丁目１０－１",
+    "lat": 33.5306922463191,
+    "lng": 130.454697051832,
+    "tel": "092-588-1234",
+    "url": "https://www.parent.co.jp/",
+    "pref": "福岡県",
+    "city": "春日市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4090900244",
+    "name": "巡回介護ひまわり",
+    "kana": "ジュンカイカイゴヒマワリ",
+    "address": "福岡市博多区千代5-18-7-３階FHKビル３階 FHKビル３階",
+    "lat": 33.6082323,
+    "lng": 130.4115299,
+    "tel": "092-651-9901",
+    "url": "",
+    "pref": "福岡県",
+    "city": "福岡市博多区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4090700834",
+    "name": "ほほえみ夜間サービスセンター",
+    "kana": "ホホエミヤカンサービスセンター",
+    "address": "福岡県北九州市八幡西区永犬丸南町２丁目２番４１号",
+    "lat": 33.8340637,
+    "lng": 130.7298895,
+    "tel": "093-614-2022",
+    "url": "http://www.hohoemi-gr.com/",
+    "pref": "福岡県",
+    "city": "北九州市八幡西区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "4090701030",
+    "name": "ほほえみ夜間サービスセンター",
+    "kana": "ホホエミヤカンサービスセンター",
+    "address": "永犬丸南町2丁目2番41号",
+    "lat": 33.8340433,
+    "lng": 130.729897,
+    "tel": "093-614-2022",
+    "url": "https://www.hohoemi-gr.com/",
+    "pref": "福岡県",
+    "city": "北九州市八幡西区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": null,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]

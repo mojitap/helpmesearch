@@ -1,0 +1,90 @@
+[
+  {
+    "id": "2290400262",
+    "name": "伊豆介護センター",
+    "kana": "イズカイゴセンター",
+    "address": "音無町5-6伊豆介護センター 伊豆介護センター",
+    "lat": 32.7880252,
+    "lng": 129.8594489,
+    "tel": "0557-36-9069",
+    "url": "http://www.izukaigo.com/",
+    "pref": "静岡県",
+    "city": "伊東市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 20,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2294200148",
+    "name": "アクタガワ　ハートライフ千代田",
+    "kana": "アクタガワ　ハートライフチヨダ",
+    "address": "静岡市葵区千代田6－14－7",
+    "lat": 34.998143717263,
+    "lng": 138.407328601233,
+    "tel": "054-265-1700",
+    "url": "https://www.akutagawa-heartlife.jp",
+    "pref": "静岡県",
+    "city": "静岡市葵区",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2295300301",
+    "name": "夜間対応型訪問介護フォレスタ藤枝",
+    "kana": "ヤカンタイオウガタホウモンカイゴフォレスタフジエダ",
+    "address": "藤枝市小石川町2-8-13",
+    "lat": 34.8565868,
+    "lng": 138.2565083,
+    "tel": "054-647-3833",
+    "url": "http://www.forestafujieda.jp",
+    "pref": "静岡県",
+    "city": "藤枝市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 0,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  },
+  {
+    "id": "2290500129",
+    "name": "伊豆介護センター熱海",
+    "kana": "イズカイゴセンターアタミ",
+    "address": "静岡健熱海市緑ガ丘町9-7",
+    "lat": 35.1069335,
+    "lng": 139.0645304,
+    "tel": "0557-86-0022",
+    "url": "http://www.izukaigo.com/",
+    "pref": "静岡県",
+    "city": "熱海市",
+    "category": "night_home_help",
+    "serviceType": "夜間対応型訪問介護",
+    "capacity": 20,
+    "openDays": [
+      "平日",
+      "土曜日",
+      "日曜日",
+      "祝日"
+    ],
+    "openDaysNote": ""
+  }
+]
