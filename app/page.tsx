@@ -4,7 +4,7 @@
 import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type Item = {
   id: string;
@@ -17,34 +17,53 @@ type Item = {
   pref?: string;
 };
 
-// まずはダミー（あとでJSON/APIに差し替え）
-const SAMPLE: Item[] = [
-  { id: "1", name: "羽ノ浦整形外科内科病院", kind: "病院", tel: "0884-00-0000", address: "徳島県阿南市...", tags: ["整形外科","内科"] },
-  { id: "2", name: "おおさか中央薬局",       kind: "薬局", tel: "06-5555-1111", address: "大阪府大阪市...", tags: ["処方箋","在宅対応"] },
-  { id: "3", name: "さくらデイサービス",     kind: "デイサービス", tel: "03-3000-0000", address: "東京都杉並区...", tags: ["送迎","入浴"] },
-];
+// API → ResultCard 用に整形
+const coerceItem = (x: any): Item => ({
+  id: x.id
+    ?? `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
+  name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
+  kind: x.kindLabel || x.service || x.category || "",   // 表示用（病院/薬局/特養…）
+  tel:  x.tel ?? x["電話"] ?? x["TEL"],
+  address: x.address ?? x["住所"] ?? "",
+  url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
+  pref: x.pref ?? x["都道府県"],
+});
 
 export default function Page() {
-  const [query, setQuery] = useState<{ keyword: string; pref?: string; category?: string } | null>(null);
+  const [results, setResults] = useState<Item[] | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const results = useMemo(() => {
-    if (!query) return SAMPLE;
-    const kw = query.keyword.trim();
-    return SAMPLE.filter((it) => {
-      const hitKw = !kw || [it.name, it.address, ...(it.tags ?? [])].some((s) => s?.includes(kw));
-      const hitPref = !query.pref || it.pref === query.pref || (it.address ?? "").includes(query.pref);
-      const hitCat = !query.category || it.kind === query.category;
-      return hitKw && hitPref && hitCat;
-    });
-  }, [query]);
+  // SearchHero から { keyword, pref, category } が来る想定
+  async function handleSearch(params: { keyword: string; pref?: string; category?: string }) {
+    setLoading(true);
+
+    const qs = new URLSearchParams();
+    if (params.pref) qs.set("pref", params.pref);
+    if (params.category) qs.set("kind", params.category); // 日本語でもOK（API側で alias 吸収）
+    if (params.keyword) qs.set("q", params.keyword.trim());
+
+    const r = await fetch(`/api/search?${qs.toString()}`, { cache: "no-store" });
+    const data = await r.json(); // { total, items }
+
+    setResults((data.items || []).map(coerceItem));
+    setLoading(false);
+  }
 
   return (
     <>
       <Header />
       <main id="main">
-        <SearchHero onSearch={setQuery} />
+        <SearchHero onSearch={handleSearch} />
         <section aria-live="polite" className="mx-auto grid max-w-5xl gap-3 px-4 pb-16">
-          {results.length === 0 ? (
+          {loading ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
+              検索中…
+            </div>
+          ) : !results ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
+              条件を指定して検索してください。
+            </div>
+          ) : results.length === 0 ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
               該当する施設が見つかりませんでした。
             </div>
