@@ -1,27 +1,25 @@
 // app/region/[region]/page.tsx
 'use client';
 
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { REGION_PREFS } from '@/app/lib/jp'; // jp.ts に REGION_PREFS を export しておく
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { REGION_PREFS, REGION_LABEL, type RegionKey } from "@/app/lib/jp";
 
 export default function RegionPage() {
-  const { region } = useParams<{ region: keyof typeof REGION_PREFS }>();
-  const info = REGION_PREFS[region];
+  const { region } = useParams<{ region: RegionKey }>();
 
-  if (!info) {
-    return (
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <p className="text-sm text-neutral-500">不明な地方です。</p>
-      </main>
-    );
+  const label = REGION_LABEL[region];
+  const prefs = REGION_PREFS[region];
+
+  if (!label || !prefs) {
+    return <main className="mx-auto max-w-5xl px-4 py-8">不明なエリアです。</main>;
   }
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      <h1 className="text-2xl font-extrabold">{info.label}</h1>
+      <h1 className="text-2xl font-extrabold">{label}</h1>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {info.prefs.map((p) => (
+        {prefs.map((p) => (
           <Link
             key={p}
             href={`/pref/${encodeURIComponent(p)}`}
