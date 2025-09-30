@@ -4,7 +4,6 @@
 import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
-import RegionGate from "@/components/RegionGate";
 import { useState } from "react";
 import RegionMap from "@/components/RegionMap";
 
@@ -53,11 +52,8 @@ export default function Page() {
       <main id="main">
         <SearchHero onSearch={handleSearch} />
 
-        {/* 地図風の地方タイル */}
-        <RegionMap />
-
-        {/* ★結果が出るまではエリアから探すを表示（常時表示でもOK） */}
-        {!results && <RegionGate />}
+        {/* 検索結果が出るまでは“日本地図タイル”を表示 */}
+        {!results && <RegionMap />}
 
         <section aria-live="polite" className="mx-auto grid max-w-5xl gap-3 px-4 pb-16">
           {loading ? (
