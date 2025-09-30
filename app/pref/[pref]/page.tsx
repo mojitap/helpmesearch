@@ -1,12 +1,13 @@
+// app/pref/[pref]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
-type Props = { params: { pref: string } };  // ← 自前の型
-
-export default function PrefPage({ params }: Props) {
-  const pref = decodeURIComponent(params.pref);
+export default function PrefPage() {
+  const { pref: encodedPref } = useParams<{ pref: string }>();
+  const pref = decodeURIComponent(encodedPref);
   const [cities, setCities] = useState<string[]>([]);
 
   useEffect(() => {
