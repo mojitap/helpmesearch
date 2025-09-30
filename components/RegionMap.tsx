@@ -2,26 +2,30 @@
 "use client";
 
 import Link from "next/link";
-import {
-  REGION_LABEL,
-  REGION_PREFS,
-  type RegionKey,
-} from "@/app/lib/jp";
+import { REGION_LABEL, REGION_PREFS } from "@/app/lib/jp";
 
-/** やさしい配色（必要ならお好みで調整OK） */
-const REG_COLORS: Record<RegionKey, string> = {
-  hokkaido: "#E8F4FF",  // 薄い水色
-  tohoku:   "#EAF7EA",  // 薄い若草
-  kanto:    "#FFF2E8",  // 薄いサーモン
-  chubu:    "#EFE9FD",  // 薄いラベンダー
-  kinki:    "#FFF9CC",  // 薄いクリーム
-  chugoku:  "#EAF6FF",  // 薄い空色
-  shikoku:  "#EFFFF3",  // 薄いミント
-  kyushu:   "#FFEFF5",  // 薄いピンク
+// jp.ts が持っているキー（6区分 or 8区分）をそのまま採用
+type K = keyof typeof REGION_LABEL;
+
+// やさしい配色（存在するキーだけ使われます）
+const REG_COLORS: Partial<Record<K, string>> = {
+  // 8区分系
+  hokkaido: "#E8F4FF",
+  tohoku: "#EAF7EA",
+  kanto: "#FFF2E8",
+  chubu: "#EFE9FD",
+  kinki: "#FFF9CC",
+  chugoku: "#EAF6FF",
+  shikoku: "#EFFFF3",
+  kyushu: "#FFEFF5",
+  // 6区分系
+  hokkaido_tohoku: "#E8F4FF",
+  chugoku_shikoku: "#EAF6FF",
+  kyushu_okinawa: "#FFEFF5",
 };
 
-/** グリッドの“地図配置”（PC向け）。6列×6行。ピリオドは空きマス */
-const GRID_AREAS = `
+// 8区分の地図っぽい配置
+const GRID_8 = `
 ". . . H H ."
 ". T T H H ."
 ". C C T T ."
@@ -30,30 +34,18 @@ const GRID_AREAS = `
 "CH CH KY KY S ."
 `;
 
-/** 各地方をどのエリア記号に置くかマッピング */
-const AREA_NAME: Record<RegionKey, string> = {
-  hokkaido: "H",
-  tohoku:   "T",
-  kanto:    "KA",
-  chubu:    "C",
-  kinki:    "KI",   // ← 配置には "KA" を使っていないので、下で grid に KI を追加しないよう注意
-  chugoku:  "CH",
-  shikoku:  "S",
-  kyushu:   "KY",
-};
+// 6区分の簡易配置（“北海道・東北 / 関東 / 中部 / 近畿 / 中国・四国 / 九州・沖縄”）
+const GRID_6 = `
+". . . HT HT ."
+". C C KA KA ."
+"CH CH C C KA KA"
+"CH CH KY KY . ."
+`;
 
-// ※ 上の GRID_AREAS では「KI」は使っていません。
-//   近畿(kinki)は KA エリアの左隣に被らせず置くため、行列調整が難しければ
-//   いまは KA に近畿を載せず、別行にしたい場合は GRID_AREAS をあとで微調整してください。
-//   今回の配置では近畿は KA の下段左寄りに見える配置（KA と同列）にしています。
-//   → 近畿は "KA" ではなく独立させたい場合は GRID_AREAS に "KI" を足し、下の RegionCell 呼び出しも追加してください。
-
-type CellProps = { region: RegionKey; area: string };
-
-function RegionCell({ region, area }: CellProps) {
+function RegionCell({ region, area }: { region: K; area: string }) {
   const label = REGION_LABEL[region];
-  const prefs = REGION_PREFS[region];
-  const bg = REG_COLORS[region];
+  const prefs = (REGION_PREFS as Record<string, string[]>)[region] ?? [];
+  const bg = REG_COLORS[region] ?? "#F8FAFC";
 
   return (
     <Link
@@ -62,52 +54,76 @@ function RegionCell({ region, area }: CellProps) {
       className="block rounded-2xl border border-black/10 p-4 shadow-sm hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-blue-400 transition"
     >
       <div className="text-sm font-semibold">{label}</div>
-      <div className="mt-1 text-xs text-neutral-700">
-        {prefs.join(" / ")}
-      </div>
+      <div className="mt-1 text-xs text-neutral-700">{prefs.join(" / ")}</div>
     </Link>
   );
 }
 
 export default function RegionMap() {
+  // 8区分かどうかはキーの有無で判定
+  const isEight =
+    "hokkaido" in REGION_LABEL ||
+    "tohoku" in REGION_LABEL ||
+    "shikoku" in REGION_LABEL;
+
   return (
     <section className="mx-auto max-w-5xl px-4 py-8">
       {/* PC/タブレット: 地図風グリッド */}
-      <div
-        className="hidden md:grid gap-3"
-        style={{
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-          gridTemplateAreas: GRID_AREAS,
-        }}
-      >
-        <RegionCell region="hokkaido" area="H" />
-        <RegionCell region="tohoku"   area="T" />
-        <RegionCell region="kanto"    area="KA" />
-        <RegionCell region="chubu"    area="C" />
-        <RegionCell region="chugoku"  area="CH" />
-        <RegionCell region="kyushu"   area="KY" />
-        <RegionCell region="shikoku"  area="S" />
-        {/* 近畿を独立させたい場合は GRID_AREAS に "KI" を置き、この1行を有効化
-        <RegionCell region="kinki"    area="KI" />
-        */}
-      </div>
+      {isEight ? (
+        <div
+          className="hidden md:grid gap-3"
+          style={{
+            gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+            gridTemplateAreas: GRID_8,
+          }}
+        >
+          {"hokkaido" in REGION_LABEL && <RegionCell region={"hokkaido" as K} area="H" />}
+          {"tohoku"   in REGION_LABEL && <RegionCell region={"tohoku" as K}   area="T" />}
+          {"kanto"    in REGION_LABEL && <RegionCell region={"kanto" as K}    area="KA" />}
+          {"chubu"    in REGION_LABEL && <RegionCell region={"chubu" as K}    area="C" />}
+          {"chugoku"  in REGION_LABEL && <RegionCell region={"chugoku" as K}  area="CH" />}
+          {"kyushu"   in REGION_LABEL && <RegionCell region={"kyushu" as K}   area="KY" />}
+          {"shikoku"  in REGION_LABEL && <RegionCell region={"shikoku" as K}  area="S" />}
+          {"kinki"    in REGION_LABEL && (
+            // 近畿を独立させたい場合は GRID_8 を微調整し、ここにも "KI" を置いてください。
+            <RegionCell region={"kinki" as K} area="KA" />
+          )}
+        </div>
+      ) : (
+        <div
+          className="hidden md:grid gap-3"
+          style={{
+            gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+            gridTemplateAreas: GRID_6,
+          }}
+        >
+          {"hokkaido_tohoku" in REGION_LABEL && (
+            <RegionCell region={"hokkaido_tohoku" as K} area="HT" />
+          )}
+          {"kanto" in REGION_LABEL && <RegionCell region={"kanto" as K} area="KA" />}
+          {"chubu" in REGION_LABEL && <RegionCell region={"chubu" as K} area="C" />}
+          {"kinki" in REGION_LABEL && <RegionCell region={"kinki" as K} area="KA" />}
+          {"chugoku_shikoku" in REGION_LABEL && (
+            <RegionCell region={"chugoku_shikoku" as K} area="CH" />
+          )}
+          {"kyushu_okinawa" in REGION_LABEL && (
+            <RegionCell region={"kyushu_okinawa" as K} area="KY" />
+          )}
+        </div>
+      )}
 
-      {/* スマホ: タイル一覧（クリックしやすさ優先） */}
+      {/* スマホ: タイル一覧 */}
       <div className="grid md:hidden grid-cols-2 gap-3">
-        {(
-          [
-            "hokkaido","tohoku","kanto","chubu","kinki","chugoku","shikoku","kyushu",
-          ] as RegionKey[]
-        ).map((key) => (
+        {(Object.keys(REGION_LABEL) as K[]).map((key) => (
           <Link
             key={key}
             href={`/region/${key}`}
-            style={{ backgroundColor: REG_COLORS[key] }}
+            style={{ backgroundColor: REG_COLORS[key] ?? "#F8FAFC" }}
             className="rounded-xl border border-black/10 p-4 text-sm shadow-sm"
           >
             <div className="font-semibold">{REGION_LABEL[key]}</div>
             <div className="mt-1 text-xs text-neutral-700">
-              {REGION_PREFS[key].join(" / ")}
+              {(REGION_PREFS as Record<string, string[]>)[key]?.join(" / ")}
             </div>
           </Link>
         ))}
