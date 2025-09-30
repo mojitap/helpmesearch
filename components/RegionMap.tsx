@@ -8,7 +8,7 @@ import { REGION_LABEL, REGION_PREFS } from "@/app/lib/jp";
 type K = keyof typeof REGION_LABEL;
 
 // やさしい配色（存在するキーだけ使われます）
-const REG_COLORS: Partial<Record<K, string>> = {
+const REG_COLORS: Record<string, string> = {
   // 8区分系
   hokkaido: "#E8F4FF",
   tohoku: "#EAF7EA",
