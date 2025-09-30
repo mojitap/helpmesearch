@@ -6,6 +6,7 @@ import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
 import RegionGate from "@/components/RegionGate";
 import { useState } from "react";
+import RegionMap from "@/components/RegionMap";
 
 type Item = {
   id: string;
@@ -51,6 +52,9 @@ export default function Page() {
       <Header />
       <main id="main">
         <SearchHero onSearch={handleSearch} />
+
+        {/* 地図風の地方タイル */}
+        <RegionMap />
 
         {/* ★結果が出るまではエリアから探すを表示（常時表示でもOK） */}
         {!results && <RegionGate />}
