@@ -1,15 +1,16 @@
-// app/pref/[pref]/page.tsx
-"use client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import type { PageProps } from "next";
+'use client';
 
-export default function PrefPage({ params }: PageProps<{ pref: string }>) {
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+type Props = { params: { pref: string } };  // ← 自前の型
+
+export default function PrefPage({ params }: Props) {
   const pref = decodeURIComponent(params.pref);
   const [cities, setCities] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch(`/data/pref/${encodeURIComponent(pref)}.json`, { cache: "no-store" })
+    fetch(`/data/pref/${encodeURIComponent(pref)}.json`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : []))
       .then((arr) => setCities(Array.isArray(arr) ? arr : []))
       .catch(() => setCities([]));
@@ -18,6 +19,7 @@ export default function PrefPage({ params }: PageProps<{ pref: string }>) {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
       <h1 className="text-2xl font-extrabold">{pref}</h1>
+
       {cities.length === 0 ? (
         <div className="rounded-xl border border-dashed p-6 text-sm text-neutral-500">
           市区町村データが見つかりませんでした。
@@ -25,7 +27,7 @@ export default function PrefPage({ params }: PageProps<{ pref: string }>) {
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {cities.map((c) => {
-            const name = typeof c === "string" ? c : (c as any).name;
+            const name = typeof c === 'string' ? c : (c as any).name;
             return (
               <Link
                 key={name}
