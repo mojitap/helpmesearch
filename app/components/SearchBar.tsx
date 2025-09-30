@@ -1,6 +1,11 @@
 'use client';
 import React, { useState } from 'react';
-import { PREFS_47, KIND_OPTIONS, KindValue, PrefValue } from '@/app/lib/search-constants';
+import {
+  PREFS_47,
+  KIND_OPTIONS,
+  type KindValue,
+  type PrefValue,
+} from '@/app/lib/jp';
 
 export default function SearchBar() {
   const [q, setQ] = useState('');
