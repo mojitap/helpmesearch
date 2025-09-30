@@ -1,28 +1,37 @@
-"use client";
-import Link from "next/link";
-import { REGION_PREFS } from "@/app/lib/jp"; // { hokkaido:{label,prefs}, ... }
+// components/RegionGate.tsx
+'use client';
 
-const ORDER = ["hokkaido","tohoku","hokushinetsu","kanto","tokai","kansai","chugoku","shikoku","kyushu"] as const;
+import Link from "next/link";
+import { REGION_PREFS, REGION_LABEL, type RegionKey } from "@/app/lib/jp";
+
+const ORDER: RegionKey[] = [
+  "hokkaido_tohoku",
+  "kanto",
+  "chubu",
+  "kinki",
+  "chugoku_shikoku",
+  "kyushu_okinawa",
+];
 
 export default function RegionGate() {
   return (
-    <section className="mx-auto max-w-5xl px-4 py-8">
-      <h2 className="mb-4 text-xl font-bold">エリアから探す</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {ORDER.map((key) => {
-          const region = REGION_PREFS[key];
-          return (
-            <Link
-              key={key}
-              href={`/region/${key}`}
-              className="aspect-square rounded-2xl border border-black/10 bg-white shadow-sm
-                         flex items-center justify-center text-lg font-semibold hover:bg-gray-50"
-            >
-              {region.label}
-            </Link>
-          );
-        })}
-      </div>
+    <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+      {ORDER.map((key) => {
+        const label = REGION_LABEL[key];
+        const prefs = REGION_PREFS[key];
+        return (
+          <Link
+            key={key}
+            href={`/region/${key}`}
+            className="rounded-2xl border bg-white p-4 hover:bg-gray-50"
+          >
+            <div className="font-bold">{label}</div>
+            <div className="mt-1 text-xs text-neutral-500">
+              {prefs.join(" / ")}
+            </div>
+          </Link>
+        );
+      })}
     </section>
   );
 }
