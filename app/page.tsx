@@ -4,6 +4,7 @@
 import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
+import RegionGate from "@/components/RegionGate";
 import { useState } from "react";
 
 type Item = {
@@ -33,18 +34,14 @@ export default function Page() {
   const [results, setResults] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // SearchHero から { keyword, pref, category } が来る想定
   async function handleSearch(params: { keyword: string; pref?: string; category?: string }) {
     setLoading(true);
-
     const qs = new URLSearchParams();
     if (params.pref) qs.set("pref", params.pref);
-    if (params.category) qs.set("kind", params.category); // 日本語でもOK（API側で alias 吸収）
+    if (params.category) qs.set("kind", params.category);
     if (params.keyword) qs.set("q", params.keyword.trim());
-
     const r = await fetch(`/api/search?${qs.toString()}`, { cache: "no-store" });
-    const data = await r.json(); // { total, items }
-
+    const data = await r.json();
     setResults((data.items || []).map(coerceItem));
     setLoading(false);
   }
@@ -54,6 +51,10 @@ export default function Page() {
       <Header />
       <main id="main">
         <SearchHero onSearch={handleSearch} />
+
+        {/* ★結果が出るまではエリアから探すを表示（常時表示でもOK） */}
+        {!results && <RegionGate />}
+
         <section aria-live="polite" className="mx-auto grid max-w-5xl gap-3 px-4 pb-16">
           {loading ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
