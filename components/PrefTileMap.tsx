@@ -131,6 +131,9 @@ export default function PrefTileMap({ mode = "pref" }: { mode?: Mode }) {
     (Object.keys(REG8_PREFS) as Region8Key[]).map((k) => REG8_PREFS[k][0] as PrefValue)
   );
 
+  // 地方モードなら代表（各地方の先頭1枚）だけを描画
+  const tiles = mode === "region" ? TILES.filter(t => representative.has(t.p)) : TILES;
+
   return (
     <section className="mx-auto w-full px-4 py-8">
       <div className="overflow-x-auto">
@@ -141,9 +144,9 @@ export default function PrefTileMap({ mode = "pref" }: { mode?: Mode }) {
             gridTemplateRows: "repeat(11, 48px)",
           }}
         >
-          {TILES.map((t) => {
-            const region = PREF_TO_REG8[t.p];          // どの地方か
-            const color = COLORS[region];               // 地方色（あなたの COLORS を利用）
+          {tiles.map((t) => {
+            const region = PREF_TO_REG8[t.p];
+            const color = COLORS[region];
             const isRegion = mode === "region";
 
             const href = isRegion
@@ -151,8 +154,8 @@ export default function PrefTileMap({ mode = "pref" }: { mode?: Mode }) {
               : `/pref/${encodeURIComponent(t.p)}`;
 
             const label = isRegion
-              ? (representative.has(t.p) ? REG8_LABEL[region] : "") // 代表のみ表示
-              : (ABBR[t.p] ?? t.p);                                  // 都道府県モード
+              ? (representative.has(t.p) ? REG8_LABEL[region] : "")
+              : (ABBR[t.p] ?? t.p);
 
             return (
               <Link
