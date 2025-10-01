@@ -2,106 +2,93 @@
 "use client";
 
 import Link from "next/link";
-import { REGION_PREFS, REGION_LABEL, type RegionKey } from "@/app/lib/jp";
+import { REG8_LABEL, type Region8Key } from "@/app/lib/jp";
 
-type K = RegionKey;
-
-const REG_COLORS: Record<string, string> = {
-  hokkaido_tohoku: "#E8F4FF",
-  kanto: "#FFF2E8",
-  chubu: "#EFE9FD",
-  kinki: "#FFF9CC",
-  chugoku_shikoku: "#EAF6FF",
-  kyushu_okinawa: "#FFEFF5",
+/** やさしい配色（8地方ぶん） */
+const REGION_COLORS: Record<Region8Key, string> = {
+  hokkaido: "#E8F4FF",
+  tohoku:   "#EAF7EA",
+  kanto:    "#FFF2E8",
+  chubu:    "#EFE9FD",
+  kinki:    "#FFF9CC",
+  chugoku:  "#EAF6FF",
+  shikoku:  "#EFFFF3",
+  kyushu:   "#FFEFF5",
 };
 
+/** PC/タブレット：日本地図っぽい配置（8カラム × 可変行） */
+type TileSpec = {
+  key: Region8Key;
+  colStart: number; colSpan: number;
+  rowStart: number; rowSpan: number;
+};
+const PC_LAYOUT: TileSpec[] = [
+  // 北から南へ流れる配置（微調整は下の数字だけ変えればOK）
+  { key: "hokkaido", colStart: 7, colSpan: 2, rowStart: 1, rowSpan: 2 },
+  { key: "tohoku",   colStart: 6, colSpan: 2, rowStart: 2, rowSpan: 2 },
+  { key: "kanto",    colStart: 7, colSpan: 2, rowStart: 4, rowSpan: 2 },
+  { key: "chubu",    colStart: 5, colSpan: 2, rowStart: 4, rowSpan: 2 },
+  { key: "kinki",    colStart: 6, colSpan: 2, rowStart: 6, rowSpan: 2 },
+  { key: "chugoku",  colStart: 4, colSpan: 2, rowStart: 6, rowSpan: 2 },
+  { key: "shikoku",  colStart: 5, colSpan: 1, rowStart: 8, rowSpan: 1 },
+  { key: "kyushu",   colStart: 3, colSpan: 2, rowStart: 8, rowSpan: 2 },
+];
+
 export default function RegionMap() {
-  const entry = (key: K) => ({
-    key,
-    label: REGION_LABEL[key],
-    prefs: REGION_PREFS[key],
-  });
-
-  const HK = entry("hokkaido_tohoku");
-  const KA = entry("kanto");
-  const CB = entry("chubu");
-  const KI = entry("kinki");
-  const CS = entry("chugoku_shikoku");
-  const KY = entry("kyushu_okinawa");
-
   return (
     <section className="mx-auto max-w-5xl px-4 py-8">
-      <div className="jp-wrap">
-        <Tile area="hk" label={HK.label} prefs={HK.prefs} color={REG_COLORS[HK.key]} />
-        <Tile area="ka" label={KA.label} prefs={KA.prefs} color={REG_COLORS[KA.key]} />
-        <Tile area="cb" label={CB.label} prefs={CB.prefs} color={REG_COLORS[CB.key]} />
-        <Tile area="ki" label={KI.label} prefs={KI.prefs} color={REG_COLORS[KI.key]} />
-        <Tile area="cs" label={CS.label} prefs={CS.prefs} color={REG_COLORS[CS.key]} />
-        <Tile area="ky" label={KY.label} prefs={KY.prefs} color={REG_COLORS[KY.key]} />
+      {/* PC/タブレット：地図風タイル */}
+      <div className="hidden md:grid map-grid">
+        {PC_LAYOUT.map(({ key, colStart, colSpan, rowStart, rowSpan }) => (
+          <Link
+            key={key}
+            href={`/region/${key}`}
+            className="tile"
+            style={{
+              gridColumn: `${colStart} / span ${colSpan}`,
+              gridRow: `${rowStart} / span ${rowSpan}`,
+              backgroundColor: REGION_COLORS[key],
+            }}
+            aria-label={REG8_LABEL[key]}
+          >
+            <span className="label">{REG8_LABEL[key]}</span>
+          </Link>
+        ))}
       </div>
 
-      {/* スマホは1カラム */}
-      <style jsx>{`
-        .jp-wrap {
-          display: grid;
-          gap: 16px;
-          grid-template-columns: repeat(6, minmax(0, 1fr));
-          grid-template-rows: repeat(5, auto);
-          /* 北東→南西へ流れる “日本っぽい” 配置 */
-          grid-template-areas:
-            ". hk hk . . ."
-            ". .  ka ka . ."
-            "cb cb cb . . ."
-            ".  ki ki . . ."
-            "cs cs ky ky . .";
-        }
-        @media (max-width: 768px) {
-          .jp-wrap {
-            grid-template-columns: 1fr;
-            grid-template-rows: none;
-            grid-template-areas:
-              "hk"
-              "ka"
-              "cb"
-              "ki"
-              "cs"
-              "ky";
-          }
-        }
-      `}</style>
-    </section>
-  );
-}
-
-function Tile({
-  area,
-  label,
-  prefs,
-  color,
-}: {
-  area: "hk" | "ka" | "cb" | "ki" | "cs" | "ky";
-  label: string;
-  prefs: readonly string[];
-  color: string;
-}) {
-  return (
-    <section
-      style={{ gridArea: area, background: color }}
-      className="rounded-2xl border border-black/10 p-4 shadow-sm"
-    >
-      <h3 className="mb-2 font-semibold">{label}</h3>
-      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-neutral-700">
-        {prefs.map((p) => (
-          <li key={p}>
-            <Link
-              href={`/pref/${encodeURIComponent(p)}`}
-              className="underline-offset-4 hover:underline"
-            >
-              {p}
-            </Link>
-          </li>
+      {/* スマホ：2カラムのシンプルなタイル */}
+      <div className="grid md:hidden grid-cols-2 gap-3">
+        {(Object.keys(REG8_LABEL) as Region8Key[]).map((k) => (
+          <Link
+            key={k}
+            href={`/region/${k}`}
+            className="rounded-xl border border-black/10 p-4 shadow-sm"
+            style={{ backgroundColor: REGION_COLORS[k] }}
+            aria-label={REG8_LABEL[k]}
+          >
+            <span className="font-semibold">{REG8_LABEL[k]}</span>
+          </Link>
         ))}
-      </ul>
+      </div>
+
+      <style jsx>{`
+        .map-grid {
+          grid-template-columns: repeat(8, minmax(0, 1fr));
+          grid-auto-rows: 76px;
+          gap: 14px;
+        }
+        .tile {
+          display: flex;
+          align-items: center;
+          padding: 14px 16px;
+          border-radius: 16px;
+          border: 1px solid rgba(0,0,0,.1);
+          box-shadow: 0 1px 2px rgba(0,0,0,.06);
+          transition: box-shadow .15s ease, transform .1s ease;
+        }
+        .tile:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); transform: translateY(-1px); }
+        .label { font-weight: 700; font-size: 14px; }
+      `}</style>
     </section>
   );
 }
