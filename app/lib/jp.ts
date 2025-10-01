@@ -78,3 +78,9 @@ export const REG8_PREFS: Record<Region8Key, PrefValue[]> = {
   shikoku: ["徳島県","香川県","愛媛県","高知県"],
   kyushu: ["福岡県","佐賀県","長崎県","大分県","熊本県","宮崎県","鹿児島県","沖縄県"],
 };
+
+export const PREF_TO_REG8 = Object.fromEntries(
+  (Object.keys(REG8_PREFS) as Region8Key[]).flatMap((key) =>
+    REG8_PREFS[key].map((pref) => [pref, key] as const)
+  )
+) as Record<PrefValue, Region8Key>;
