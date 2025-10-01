@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
 import { useState } from "react";
-import RegionMap from "@/components/RegionMap";
+import PrefTileMap from "@/components/PrefTileMap";
 
 type Item = {
   id: string;
@@ -18,13 +18,13 @@ type Item = {
   pref?: string;
 };
 
-// API → ResultCard 用に整形
 const coerceItem = (x: any): Item => ({
-  id: x.id
-    ?? `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
+  id:
+    x.id ??
+    `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
   name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
-  kind: x.kindLabel || x.service || x.category || "",   // 表示用（病院/薬局/特養…）
-  tel:  x.tel ?? x["電話"] ?? x["TEL"],
+  kind: x.kindLabel || x.service || x.category || "",
+  tel: x.tel ?? x["電話"] ?? x["TEL"],
   address: x.address ?? x["住所"] ?? "",
   url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
   pref: x.pref ?? x["都道府県"],
@@ -52,8 +52,8 @@ export default function Page() {
       <main id="main">
         <SearchHero onSearch={handleSearch} />
 
-        {/* 検索結果が出るまでは“日本地図タイル”を表示 */}
-        {!results && <RegionMap />}
+        {/* 検索結果が出るまでは“日本地図タイル（都道府県）”を表示 */}
+        {!results && <PrefTileMap />}
 
         <section aria-live="polite" className="mx-auto grid max-w-5xl gap-3 px-4 pb-16">
           {loading ? (
