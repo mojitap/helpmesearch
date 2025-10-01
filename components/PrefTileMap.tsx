@@ -2,7 +2,15 @@
 "use client";
 
 import Link from "next/link";
-import { PREFS_47, type PrefValue } from "@/app/lib/jp";
+import {
+  REG8_LABEL,
+  REG8_PREFS,
+  PREF_TO_REG8,
+  type Region8Key,
+  type PrefValue,
+} from "@/app/lib/jp";
+
+type Mode = "pref" | "region";
 
 /** 8地方の色（要求通り：東北=青 / 関東=黄） */
 const REGION_OF: Record<PrefValue, "hokkaido"|"tohoku"|"kanto"|"chubu"|"kinki"|"chugoku"|"shikoku"|"kyushu"> = {
@@ -117,28 +125,59 @@ function TileBox({ t }: { t: Tile }) {
   );
 }
 
-export default function PrefTileMap() {
+export default function PrefTileMap({ mode = "pref" }: { mode?: Mode }) {
+  // 地方モード時、各地方の「代表タイル」（最初の都道府県）だけに地方名を出す
+  const representative = new Set<PrefValue>(
+    (Object.keys(REG8_PREFS) as Region8Key[]).map((k) => REG8_PREFS[k][0] as PrefValue)
+  );
+
   return (
     <section className="mx-auto w-full px-4 py-8">
-      {/* 横スクロール許容（スマホは縮小、PCは広め） */}
       <div className="overflow-x-auto">
         <div
           className="grid gap-2 rounded-2xl bg-white/10 p-2"
           style={{
             gridTemplateColumns: "repeat(13, 48px)",
             gridTemplateRows: "repeat(11, 48px)",
-            // 画面幅でスケール（スマホで潰れ過ぎないよう clamp）
-            // ※お好みで 44/52px など微調整OK
           }}
         >
-          {TILES.map((t) => (
-            <TileBox key={`${t.p}-${t.c}-${t.r}`} t={t} />
-          ))}
+          {TILES.map((t) => {
+            const region = PREF_TO_REG8[t.p];          // どの地方か
+            const color = COLORS[region];               // 地方色（あなたの COLORS を利用）
+            const isRegion = mode === "region";
+
+            const href = isRegion
+              ? `/region8/${region}`
+              : `/pref/${encodeURIComponent(t.p)}`;
+
+            const label = isRegion
+              ? (representative.has(t.p) ? REG8_LABEL[region] : "") // 代表のみ表示
+              : (ABBR[t.p] ?? t.p);                                  // 都道府県モード
+
+            return (
+              <Link
+                key={`${t.p}-${t.c}-${t.r}`}
+                href={href}
+                style={{
+                  gridColumn: `${t.c} / span ${t.w ?? 1}`,
+                  gridRow: `${t.r} / span ${t.h ?? 1}`,
+                  background: color,
+                }}
+                className="flex items-center justify-center rounded-[8px] border border-black/10 text-[12px] leading-tight text-white shadow-sm hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                aria-label={isRegion ? REG8_LABEL[region] : t.p}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </div>
-      <p className="mt-3 text-center text-xs text-neutral-500">
-        色は地方ごと（北海道=緑／東北=青／関東=黄／中部=橙／近畿=シアン／中国=紫／四国=薄紫／九州=ピンク）
-      </p>
+      {/* 補足テキストは任意。不要なら削除OK */}
+      {mode === "pref" && (
+        <p className="mt-3 text-center text-xs text-neutral-500">
+          色は地方ごと（北海道=緑／東北=青／関東=黄／中部=橙／近畿=シアン／中国=紫／四国=薄紫／九州=ピンク）
+        </p>
+      )}
     </section>
   );
 }
