@@ -138,3 +138,86 @@ document.getElementById('btn-back').addEventListener('click', (e)=>{
   vRegions.classList.add('active');
 });
 </script>
+
+<!-- 地方→都道府県ピッカー（hms-名前空間で衝突回避） -->
+<section id="hms-regionpicker" class="hms-wrap"></section>
+
+<style>
+  .hms-wrap{max-width:960px;margin:32px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;color:#111}
+  .hms-title{font-size:20px;font-weight:800;margin:0 0 12px}
+  .hms-hint{color:#6b7280;font-size:12px;margin:6px 2px 14px}
+  .hms-view{display:none}
+  .hms-view.is-active{display:block}
+  .hms-grid8{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media(min-width:640px){.hms-grid8{grid-template-columns:repeat(4,1fr)}}
+  .hms-card{display:block;text-align:center;text-decoration:none;color:#111;background:#f6f7fb;border:1px solid #ececf1;border-radius:14px;padding:14px 12px;font-weight:700;font-size:16px}
+  .hms-back{display:inline-flex;gap:6px;align-items:center;padding:8px 10px;border-radius:10px;background:#eef2ff;color:#1e40af;text-decoration:none;font-weight:700;font-size:14px}
+  .hms-region-title{font-size:18px;font-weight:800;margin:12px 0 6px}
+  .hms-prefgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+  @media(min-width:768px){.hms-prefgrid{grid-template-columns:repeat(3,1fr)}}
+  .hms-pref{display:block;text-align:center;text-decoration:none;color:#111;background:#fbfbfd;border:1px solid #ececf1;border-radius:12px;padding:12px 10px;font-weight:700;font-size:16px}
+  .hms-mapbox{margin-top:14px;background:#fff;border:1px solid #ececf1;border-radius:12px;padding:8px}
+  .hms-mapbox img{width:100%;height:auto;display:block;border-radius:8px}
+</style>
+
+<script>
+(function(){
+  const DATA={
+    hokkaido:{name:"北海道",color:"#9BD38A",map:"",prefs:[["hokkaido","北海道"]]},
+    tohoku:{name:"東北",color:"#5AA0E8",map:"",prefs:[["aomori","青森"],["iwate","岩手"],["miyagi","宮城"],["akita","秋田"],["yamagata","山形"],["fukushima","福島"]]},
+    kanto:{name:"関東",color:"#FFD676",map:"",prefs:[["ibaraki","茨城"],["tochigi","栃木"],["gunma","群馬"],["saitama","埼玉"],["chiba","千葉"],["tokyo","東京"],["kanagawa","神奈川"]]},
+    chubu:{name:"中部",color:"#7CC6F2",map:"",prefs:[["niigata","新潟"],["toyama","富山"],["ishikawa","石川"],["fukui","福井"],["yamanashi","山梨"],["nagano","長野"],["gifu","岐阜"],["shizuoka","静岡"],["aichi","愛知"]]},
+    kansai:{name:"関西",color:"#B8E986",map:"",prefs:[["mie","三重"],["shiga","滋賀"],["kyoto","京都"],["osaka","大阪"],["hyogo","兵庫"],["nara","奈良"],["wakayama","和歌山"]]},
+    chugoku:{name:"中国",color:"#A9D08E",map:"",prefs:[["tottori","鳥取"],["shimane","島根"],["okayama","岡山"],["hiroshima","広島"],["yamaguchi","山口"]]},
+    shikoku:{name:"四国",color:"#7FD9D4",map:"",prefs:[["tokushima","徳島"],["kagawa","香川"],["ehime","愛媛"],["kochi","高知"]]},
+    kyushu:{name:"九州",color:"#FFA07A",map:"",prefs:[["fukuoka","福岡"],["saga","佐賀"],["nagasaki","長崎"],["kumamoto","熊本"],["oita","大分"],["miyazaki","宮崎"],["kagoshima","鹿児島"]/*,["okinawa","沖縄"]*/]}
+  };
+
+  const mount=document.getElementById('hms-regionpicker');
+  mount.innerHTML=`
+    <div class="hms-view is-active" id="hms-list">
+      <h2 class="hms-title">地域から探す</h2>
+      <p class="hms-hint">スマホは「地方 → 都道府県」の2ステップが押しやすくて見やすいです。</p>
+      <div class="hms-grid8" id="hms-grid"></div>
+    </div>
+    <div class="hms-view" id="hms-detail">
+      <a href="#" class="hms-back" id="hms-back">← 地方一覧へ</a>
+      <div class="hms-region-title" id="hms-ttl"></div>
+      <div class="hms-mapbox" id="hms-mapbox" style="display:none">
+        <img id="hms-map" alt="">
+        <div class="hms-hint">※地図は参考表示。下の大きなボタンから都道府県を選べます。</div>
+      </div>
+      <div class="hms-prefgrid" id="hms-prefgrid"></div>
+    </div>`;
+
+  const grid=mount.querySelector('#hms-grid');
+  grid.innerHTML = Object.entries(DATA).map(([k,v]) =>
+    `<a class="hms-card" data-k="${k}" style="background:${v.color}1a">${v.name}</a>`
+  ).join('');
+
+  const vList=mount.querySelector('#hms-list');
+  const vDetail=mount.querySelector('#hms-detail');
+  const ttl=mount.querySelector('#hms-ttl');
+  const mapBox=mount.querySelector('#hms-mapbox');
+  const mapImg=mount.querySelector('#hms-map');
+  const prefGrid=mount.querySelector('#hms-prefgrid');
+
+  function showDetail(key){
+    const r=DATA[key];
+    ttl.textContent=r.name;
+    if(r.map){ mapImg.src=r.map; mapImg.alt=r.name+"の地図"; mapBox.style.display=""; }
+    else { mapBox.style.display="none"; }
+    prefGrid.innerHTML = r.prefs.map(([id,label]) => `<a class="hms-pref" href="/pref/${id}">${label}</a>`).join('');
+    vList.classList.remove('is-active'); vDetail.classList.add('is-active');
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  grid.addEventListener('click', e=>{
+    const el=e.target.closest('.hms-card'); if(!el) return;
+    showDetail(el.dataset.k);
+  });
+  mount.querySelector('#hms-back').addEventListener('click', e=>{
+    e.preventDefault();
+    vDetail.classList.remove('is-active'); vList.classList.add('is-active');
+  });
+})();
+</script>
