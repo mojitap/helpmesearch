@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* ▼ 追加：ボタン/モーダルを注入するスクリプトを読み込み */}
         <Script src="/hms4.js" strategy="afterInteractive" />
+        <Script src="/pref-bridge.js" strategy="afterInteractive" />
       </body>
     </html>
   );
