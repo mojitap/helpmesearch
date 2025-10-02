@@ -75,7 +75,7 @@
       const el = e.target.closest(".hms4-card"); if (!el) return;
       const r = DATA[el.dataset.k];
       ttl.textContent = r.name;
-      pg.innerHTML = r.prefs.map(([id, label]) => `<a class="hms4-pref" href="/pref/${id}">${label}</a>`).join("");
+      pg.innerHTML = r.prefs.map(([id,label]) => `<a class="hms4-pref" href="/?pref=${id}">${label}</a>`).join('');
       list.style.display = "none";
       detail.style.display = "block";
     });
