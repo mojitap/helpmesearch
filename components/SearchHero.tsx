@@ -27,7 +27,7 @@ export default function SearchHero({
             onSearch({
               keyword,
               pref: pref || undefined,
-              category: category || undefined, // value は英語スラッグ
+              category: category || undefined,
             });
           }}
         >
@@ -39,8 +39,11 @@ export default function SearchHero({
             className="sm:col-span-3 rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
           />
 
-          {/* 都道府県（47件） */}
+          {/* 都道府県（pref-bridge が拾えるよう name/id/aria-label を付与） */}
           <select
+            name="prefecture"
+            id="prefecture"
+            aria-label="都道府県"
             value={pref}
             onChange={(e) => setPref(e.target.value as PrefValue | "")}
             className="rounded-lg border px-3 py-2"
@@ -68,7 +71,11 @@ export default function SearchHero({
           </select>
 
           <div className="sm:col-span-5 flex justify-end">
-            <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
+            <button
+              type="submit"
+              data-search
+              className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+            >
               検索
             </button>
           </div>
