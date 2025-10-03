@@ -51,11 +51,7 @@ export default function Page() {
     setLoading(true);
     const qs = new URLSearchParams();
 
-    if (params.pref) {
-      // 既にスラッグならそのまま、日本語なら変換
-      const prefParam = PREF_TO_ID[params.pref] ?? params.pref;
-      qs.set("pref", prefParam);
-    }
+    if (params.pref) qs.set("pref", params.pref); // ← 変換しない（そのまま日本語で送る）
     if (params.category) qs.set("kind", params.category);
     if (params.keyword) qs.set("q", params.keyword.trim());
 
