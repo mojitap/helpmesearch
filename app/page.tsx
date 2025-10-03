@@ -51,10 +51,17 @@ export default function Page() {
   async function handleSearch(params: { keyword: string; pref?: string; city?: string; category?: string }) {
     setLoading(true);
     const qs = new URLSearchParams();
-    if (params.pref) qs.set("pref", params.pref);
-    if (params.city) qs.set("city", params.city);              // ★ 追加
+
+    if (params.pref) {
+      // ★ ここで日本語→スラッグ変換（既にスラッグならそのまま）
+      const prefSlug = PREF_TO_ID[params.pref] ?? params.pref;
+      qs.set("pref", prefSlug);
+    }
+
+    if (params.city) qs.set("city", params.city);
     if (params.category) qs.set("kind", params.category);
     if (params.keyword) qs.set("q", params.keyword.trim());
+
     const r = await fetch(`/api/search?${qs.toString()}`, { cache: "no-store" });
     const data = await r.json();
     setResults((data.items || []).map(coerceItem));
@@ -73,9 +80,7 @@ export default function Page() {
               検索中…
             </div>
           ) : !results ? (
-            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
-              条件を指定して検索してください。
-            </div>
+            <></>
           ) : results.length === 0 ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
               該当する施設が見つかりませんでした。
