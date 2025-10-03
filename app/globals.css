@@ -19,4 +19,4 @@ body {
 }
 
 :root { color-scheme: light; }  /* iOSの自動反転を無効化 */
-html, body { background:#fff; }
+html, body { background:#fff !important; color:#171717 !important; }
