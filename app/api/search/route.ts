@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // ---------------- ここから定義（47都道府県対応） ----------------
 const PREFS = [
   "北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県",
@@ -37,15 +40,22 @@ const CARE_KINDS = new Set([
 ]);
 const MED_KINDS  = new Set(["hospital","clinic","dental","pharmacy"]);
 
-// 日本語→英語スラッグ（日本語指定でも動く）
-const KIND_ALIAS: Record<string,string> = {
-  // 医療
-  "病院":"hospital","クリニック":"clinic","診療所":"clinic","歯科":"dental","薬局":"pharmacy","調剤薬局":"pharmacy",
-  // 介護
-  "特養":"tokuyou","老健":"rouken","介護医療院":"care_medical_institute",
-  "デイサービス":"day_service","地域密着型通所介護":"community_day_service",
-  "訪問介護":"home_help","夜間対応型訪問介護":"night_home_help",
-  "定期巡回・随時対応":"regular_patrol_nursing",
+const KIND_ALIAS: Record<string, string> = {
+  // --- 医療 ---
+  "病院":"hospital",
+  "クリニック":"clinic","診療所":"clinic","医院":"clinic",
+  "歯科":"dental","歯科医院":"dental","歯科クリニック":"dental",
+  "薬局":"pharmacy","調剤薬局":"pharmacy","保険薬局":"pharmacy",
+
+  // --- 介護 ---
+  "特養":"tokuyou","特別養護老人ホーム":"tokuyou",
+  "老健":"rouken","介護老人保健施設":"rouken",
+  "訪問介護":"home_help","ホームヘルプ":"home_help",
+  "デイサービス":"day_service","通所介護":"day_service",
+  "地域密着型通所介護":"community_day_service","地域密着デイ":"community_day_service","小規模デイ":"community_day_service",
+  "定期巡回・随時対応":"regular_patrol_nursing","定期巡回":"regular_patrol_nursing","定期巡回随時対応型訪問介護看護":"regular_patrol_nursing",
+  "夜間対応型訪問介護":"night_home_help","夜間対応":"night_home_help","夜間訪問介護":"night_home_help",
+  "介護医療院":"care_medical_institute","介護療養型医療施設":"care_medical_institute",
 };
 
 const PUB = (...p: string[]) => path.join(process.cwd(), "public", ...p);
@@ -71,10 +81,16 @@ function cityMatches(row: any, cityInput: string): boolean {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const prefRaw = searchParams.get("pref") || "";          // 例: "岩手県" / "03" / "岩手"
-  const pref = normalizePref(prefRaw);                      // 公式名へ正規化（47都道府県対応）
+  const prefRaw = searchParams.get("pref") || "";
+  const pref = normalizePref(prefRaw);
 
-  const kindRaw = searchParams.get("kind") || "";          // 未指定なら横断検索
+  const origin = new URL(req.url).origin;
+
+  const kindRaw =
+    searchParams.get("kind") ||
+    searchParams.get("industry") ||   // ← industry でも拾う
+    searchParams.get("type") ||       // ← 念のため
+    "";
   const kind1 = KIND_ALIAS[kindRaw] ?? kindRaw;
 
   const q   = (searchParams.get("q") || "").toLowerCase();
@@ -95,10 +111,16 @@ export async function GET(req: Request) {
   // 県ごとのJSONを読む（存在しないファイルはスキップ）
   let rows: any[] = [];
   for (const k of targetKinds) {
-    const fp = PUB("data", kindBase(k), k, `${pref}.json`);
-    if (!fs.existsSync(fp)) continue;
-    const arr = readJson<any>(fp).map(r => ({ ...r, kind: k }));
-    rows.push(...arr);
+    const base = MED_KINDS.has(k) ? "medical" : "care";
+    const url = `${origin}/data/${base}/${k}/${encodeURIComponent(pref)}.json`;
+    try {
+      const r = await fetch(url, { cache: "force-cache" });
+      if (!r.ok) continue;
+      const arr = (await r.json()) as any[];
+      rows.push(...arr.map((r) => ({ ...r, kind: k })));
+    } catch {
+      /* 404やネットワークエラーは無視 */
+    }
   }
 
   // 県名以外のフィルタ
