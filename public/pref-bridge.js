@@ -1,4 +1,4 @@
-/* public/pref-bridge.js */
+/* public/pref-bridge.js (robust) */
 (function () {
   const PREF_JP = {
     hokkaido:"北海道",
@@ -15,45 +15,55 @@
 
   function setSelectValue(sel, value) {
     sel.value = value;
-    // React 対応のため change をバブルさせる
     sel.dispatchEvent(new Event('change', { bubbles: true }));
     sel.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function findPrefSelect() {
+    const byLabel = Array.from(document.querySelectorAll('label'))
+      .find(l => /都道府県/.test(l.textContent || ''));
+    if (byLabel) {
+      const forId = byLabel.getAttribute('for');
+      const el = forId && document.getElementById(forId);
+      if (el && el.tagName === 'SELECT') return el;
+    }
+    const selects = Array.from(document.querySelectorAll('select'));
+    selects.sort((a,b)=> b.options.length - a.options.length);
+    return selects.find(s => s.options.length > 30) || selects[0] || null;
   }
 
   function run() {
     const p = new URLSearchParams(location.search).get('pref');
     if (!p) return;
 
-    // 都道府県セレクトを探す（name/id/aria-label のどれかで見つかればOK）
     const sel =
       document.querySelector('select[name="prefecture"]') ||
       document.querySelector('#prefecture') ||
       document.querySelector('select[aria-label="都道府県"]') ||
-      document.querySelector('select[data-role="prefecture"]');
+      document.querySelector('select[data-role="prefecture"]') ||
+      findPrefSelect();
 
     if (!sel) return;
 
-    // ① オプションの value が「aomori 等のID」ならそのまま
     if ([...sel.options].some(o => o.value === p)) {
       setSelectValue(sel, p);
     } else {
-      // ② value が「青森県 等の日本語」の場合はマップで変換
       const jp = PREF_JP[p];
-      if (jp && [...sel.options].some(o => o.value === jp || o.textContent.trim() === jp)) {
+      if (jp && [...sel.options].some(o => o.value === jp || (o.textContent||'').trim() === jp)) {
         setSelectValue(sel, jp);
       } else {
-        return; // 見つからなければ何もしない
+        return;
       }
     }
 
-    // 検索ボタンを押す
-    const btn =
-      document.querySelector('[data-search]') ||
-      document.querySelector('button[type="submit"]') ||
-      document.querySelector('button[aria-label="検索"]');
-    btn && btn.click();
+    setTimeout(() => {
+      const btn =
+        document.querySelector('[data-search]') ||
+        document.querySelector('button[type="submit"]') ||
+        document.querySelector('button[aria-label="検索"]');
+      btn && btn.click();
+    }, 50);
   }
 
-  // Hydration 後に動かしたいので load で実行
   window.addEventListener('load', run);
 })();
