@@ -51,11 +51,10 @@ export default function Page() {
   async function handleSearch(params: { keyword: string; pref?: string; city?: string; category?: string }) {
     setLoading(true);
     const qs = new URLSearchParams();
-    if (params.pref) qs.set("pref", params.pref);        // 日本語のまま
-    if (params.city) qs.set("city", params.city);         // ★ 追加
+    if (params.pref) qs.set("pref", params.pref);
+    if (params.city) qs.set("city", params.city);              // ★ 追加
     if (params.category) qs.set("kind", params.category);
     if (params.keyword) qs.set("q", params.keyword.trim());
-
     const r = await fetch(`/api/search?${qs.toString()}`, { cache: "no-store" });
     const data = await r.json();
     setResults((data.items || []).map(coerceItem));
