@@ -77,7 +77,8 @@ export default function SearchHero({
             data-role="prefecture" // ← pref-bridge 用
             value={pref}
             onChange={(e) => setPref(e.target.value)}
-            className="rounded-lg border px-3 py-2 sm:col-span-2"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:col-span-2"
           >
             <option value="">都道府県</option>
             {PREFS_47.map((jp) => (
@@ -94,7 +95,8 @@ export default function SearchHero({
               value={city}
               onChange={(e) => setCity(e.target.value)}
               disabled={!pref || loadingCities}
-              className="rounded-lg border px-3 py-2 sm:col-span-2"
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
+                         focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:col-span-2"
             >
               <option value="">{loadingCities ? "読込中…" : "市区町村"}</option>
               {cities.map((c) => (
@@ -110,7 +112,8 @@ export default function SearchHero({
               onChange={(e) => setCity(e.target.value)}
               placeholder="市区町村"
               disabled={!pref}
-              className="rounded-lg border px-3 py-2 sm:col-span-2"
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
+                         focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:col-span-2"
             />
           )}
 
@@ -118,7 +121,8 @@ export default function SearchHero({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border px-3 py-2"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             aria-label="業種"
           >
             <option value="">業種</option>
@@ -133,7 +137,8 @@ export default function SearchHero({
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="例：整形外科 / 夜間対応 / さくらクリニック"
-            className="sm:col-span-4 rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+            className="sm:col-span-4 rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
 
           {/* 5) 検索ボタン */}
