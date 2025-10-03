@@ -6,14 +6,6 @@ export default function Header() {
         <a href="/" className="font-extrabold text-lg tracking-tight">
           Help<span className="text-blue-600">Me</span>Search
         </a>
-        <nav aria-label="グローバル">
-          <button
-            className="rounded-full border px-3 py-1.5 text-sm hover:bg-neutral-50"
-            aria-label="メニュー"
-          >
-            メニュー
-          </button>
-        </nav>
       </div>
     </header>
   );
