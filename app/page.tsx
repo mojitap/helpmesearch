@@ -52,9 +52,6 @@ export default function Page() {
       <main id="main">
         <SearchHero onSearch={handleSearch} />
 
-        {/* 検索結果が出るまでは“日本地図タイル（都道府県）”を表示 */}
-        {!results && <PrefTileMap mode="region" />}
-
         <section aria-live="polite" className="mx-auto grid max-w-5xl gap-3 px-4 pb-16">
           {loading ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
