@@ -13,7 +13,7 @@
 .hms4-h{margin:0 0 14px;color:#6b7280;font:400 12px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
 .hms4-g8{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media(min-width:640px){.hms4-g8{grid-template-columns:repeat(4,1fr)}}
-.hms4-card{display:block;text-align:center;text-decoration:none;color:#111;background:#f6f7fb;border:1px solid #ececf1;border-radius:14px;padding:14px 12px;font:700 16px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+.hms4-card{display:block;text-align:center;text-decoration:none;color:#111;background:#f6f7fb;border:1px solid #ececf1;border-radius:14px;padding:14px 12px;font:700 16px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;cursor:pointer;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color: rgba(0,0,0,.12)}
 .hms4-b{display:inline-flex;gap:6px;align-items:center;padding:8px 10px;margin:6px 0 10px;border-radius:10px;background:#eef2ff;color:#1e40af;text-decoration:none;font:700 14px system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
 .hms4-pg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:768px){.hms4-pg{grid-template-columns:repeat(3,1fr)}}
@@ -69,21 +69,23 @@
     const pg    = document.getElementById("hms4-pg");
 
     grid.innerHTML = Object.entries(DATA)
-      .map(([k, v]) => `<a class="hms4-card" data-k="${k}">${v.name}</a>`)
+      .map(([k, v]) => `<button type="button" class="hms4-card" data-k="${k}">${v.name}</button>`)
       .join("");
 
     open.addEventListener("click", () => ov.classList.add("is-open"));
     ov.addEventListener("click", (e) => { if (e.target === ov) ov.classList.remove("is-open"); });
     back.addEventListener("click", (e) => { e.preventDefault(); detail.style.display = "none"; list.style.display = "block"; });
 
-    grid.addEventListener("click", (e) => {
-      const el = e.target.closest(".hms4-card"); if (!el) return;
-      const r = DATA[el.dataset.k];
+    const goDetail = (e) => {
+      const el = (e.target as HTMLElement).closest(".hms4-card"); if (!el) return;
+      const r = DATA[(el as HTMLElement).dataset.k!];
       ttl.textContent = r.name;
       pg.innerHTML = r.prefs.map(([id,label]) => `<a class="hms4-pref" href="/?pref=${id}">${label}</a>`).join('');
       list.style.display = "none";
       detail.style.display = "block";
-    });
+    };
+    grid.addEventListener("click", goDetail, { passive: true });
+    grid.addEventListener("touchend", goDetail, { passive: true });
   }
 
   // DOM 準備前後どちらでも動くように
