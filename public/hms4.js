@@ -1,7 +1,7 @@
 /* public/hms4.js */
 (function () {
   function boot() {
-    // 1) CSS 注入
+    // 1) CSS 注入（mapbox も文字列の中に入れる）
     const css = `
 .hms4-fab{position:fixed;right:20px;bottom:24px;z-index:2147483000;background:#ef476f;color:#fff;border:none;border-radius:999px;padding:12px 16px;font-weight:800;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.16);cursor:pointer}
 .hms4-fab:active{transform:translateY(1px)}
@@ -18,6 +18,8 @@
 .hms4-pg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:768px){.hms4-pg{grid-template-columns:repeat(3,1fr)}}
 .hms4-pref{display:block;text-align:center;text-decoration:none;color:#111;background:#fbfbfd;border:1px solid #ececf1;border-radius:12px;padding:12px 10px;font:700 16px system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+.hms4-mapbox{margin:10px 0 16px;background:#fff;border:1px solid #ececf1;border-radius:12px;padding:8px}
+.hms4-mapbox img{width:100%;height:auto;display:block;border-radius:8px}
 `;
     const style = document.createElement("style");
     style.textContent = css;
@@ -31,6 +33,9 @@
   <div class="hms4-md" role="dialog" aria-modal="true" aria-labelledby="hms4-title">
     <h2 class="hms4-t" id="hms4-title">地域から探す</h2>
     <p class="hms4-h">スマホは「地方 → 都道府県」の2ステップが押しやすく見やすいです。</p>
+    <div class="hms4-mapbox">
+      <img src="/img/japan-regions.png" alt="日本地図">
+    </div>
     <div id="hms4-list"><div class="hms4-g8" id="hms4-grid"></div></div>
     <div id="hms4-detail" style="display:none">
       <a href="#" class="hms4-b" id="hms4-back">← 地方一覧へ</a>
