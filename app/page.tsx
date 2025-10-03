@@ -5,7 +5,6 @@ import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
 import { useState } from "react";
-import PrefTileMap from "@/components/PrefTileMap";
 
 type Item = {
   id: string;
