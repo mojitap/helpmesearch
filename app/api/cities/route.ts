@@ -1,5 +1,7 @@
 // app/api/cities/route.ts
 import { NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
 
 // 県スラッグ ↔ 日本語
 const ID_TO_PREF: Record<string, string> = {
@@ -15,6 +17,37 @@ const ID_TO_PREF: Record<string, string> = {
   okinawa:"沖縄県",
 };
 const PREF_TO_ID = Object.fromEntries(Object.entries(ID_TO_PREF).map(([k,v]) => [v, k]));
+
+const CODE_TO_PREF: Record<string, string> = {};
+Object.values(ID_TO_PREF).forEach((name, idx) => {
+  CODE_TO_PREF[String(idx + 1).padStart(2, "0")] = name;
+});
+
+// 受け取った値（コード/県名/接尾辞なし/slug）を県名とslugに正規化
+function normalizePref(input: string): { prefJp: string; slug: string } {
+  const s = (input || "").trim();
+  if (!s) return { prefJp: "", slug: "" };
+
+  // すでに県名
+  if (s in PREF_TO_ID) return { prefJp: s, slug: PREF_TO_ID[s] };
+
+  // 2桁コード ("01"〜"47")
+  if (CODE_TO_PREF[s]) return { prefJp: CODE_TO_PREF[s], slug: PREF_TO_ID[CODE_TO_PREF[s]] };
+
+  // slug（hokkaido, tokyo, ...）
+  if (ID_TO_PREF[s]) return { prefJp: ID_TO_PREF[s], slug: s };
+
+  // 接尾辞なしを吸収（東京/大阪/京都/北海道 他）
+  const base = s.replace(/[都道府県道]$/u, "");
+  if (/^北海/.test(base)) return { prefJp: "北海道", slug: "hokkaido" };
+  if (base === "東京") return { prefJp: "東京都", slug: "tokyo" };
+  if (base === "京都") return { prefJp: "京都府", slug: "kyoto" };
+  if (base === "大阪") return { prefJp: "大阪府", slug: "osaka" };
+  const guess = base + "県";
+  if (guess in PREF_TO_ID) return { prefJp: guess, slug: PREF_TO_ID[guess] };
+
+  return { prefJp: "", slug: "" };
+}
 
 // 病院など医療/介護の代表ディレクトリ
 const MED_KINDS  = ["hospital", "clinic", "dental", "pharmacy"];
@@ -41,46 +74,65 @@ function guessCityFromAddress(prefJp: string, addr: string): string | null {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  let prefParam = (searchParams.get("pref") || "").trim(); // スラッグ or 日本語
+  const prefParam = (searchParams.get("pref") || "").trim();
   if (!prefParam) return NextResponse.json({ items: [] });
 
-  const prefId = ID_TO_PREF[prefParam] ? prefParam : (PREF_TO_ID[prefParam] ?? "");
-  const prefJp = ID_TO_PREF[prefParam] ?? (ID_TO_PREF[prefId] || prefParam);
-  const slug   = prefId || PREF_TO_ID[prefParam] || prefParam; // どちらでも対応
+  const { prefJp, slug } = normalizePref(prefParam);
+  if (!prefJp) return NextResponse.json({ items: [] });
 
-  const origin = new URL(req.url).origin;
-  const files: string[] = [];
+  const PUB = (...p: string[]) => path.join(process.cwd(), "public", ...p);
+  const readJSON = <T = any>(p: string): T[] => {
+    try { return JSON.parse(fs.readFileSync(p, "utf-8")); } catch { return []; }
+  };
 
-  // 医療優先で数種類を当てに行き、無ければ介護も参照する
-  for (const k of MED_KINDS)  files.push(`${origin}/data/medical/${k}/${encodeURIComponent(slug)}.json`);
-  for (const k of CARE_KINDS) files.push(`${origin}/data/care/${k}/${encodeURIComponent(slug)}.json`);
+  // まず pref 専用の市区町村リストがあればそれを使う（public/data/pref/<県名>.json）
+  const direct = PUB("data","pref",`${prefJp}.json`);
+  if (fs.existsSync(direct)) {
+    const arr = readJSON<any>(direct);
+    const items = arr
+      .map(x => String(x.name ?? x.city_name ?? x.city ?? "").trim())
+      .filter(Boolean)
+      .sort((a,b)=>a.localeCompare(b,"ja"));
+    return NextResponse.json(
+      { items },
+      { headers: { "Cache-Control": "s-maxage=86400, stale-while-revalidate=3600" } }
+    );
+  }
 
   const citySet = new Set<string>();
 
-  for (const url of files) {
-    try {
-      const r = await fetch(url, { next: { revalidate: 3600 } });
-      if (!r.ok) continue;
-      const arr = await r.json();
-      if (!Array.isArray(arr)) continue;
+  // medical から寄せ集め
+  for (const k of MED_KINDS) {
+    const p = PUB("data","medical",k,`${prefJp}.json`);
+    if (!fs.existsSync(p)) continue;
+    for (const x of readJSON<any>(p)) {
+      const direct =
+        x.city || x.municipality || x.city_ward ||
+        x["市区町村"] || x["市町村"] || x["区市町村"] || x["行政区"];
+      if (direct && String(direct).trim()) {
+        citySet.add(String(direct).trim());
+        continue;
+      }
+      const addr = (x.address || x["住所"] || "").toString();
+      const guessed = guessCityFromAddress(prefJp, addr);
+      if (guessed) citySet.add(guessed);
+    }
+    if (citySet.size > 200) break;
+  }
 
-      for (const x of arr) {
+  // medicalで集まらなければ care も見る
+  if (citySet.size < 1) {
+    for (const k of CARE_KINDS) {
+      const p = PUB("data","care",k,`${prefJp}.json`);
+      if (!fs.existsSync(p)) continue;
+      for (const x of readJSON<any>(p)) {
         const direct =
           x.city || x.municipality || x.city_ward ||
           x["市区町村"] || x["市町村"] || x["区市町村"] || x["行政区"];
-        if (direct && String(direct).trim()) {
-          citySet.add(String(direct).trim());
-          continue;
-        }
-        const addr = (x.address || x["住所"] || "").toString();
-        const guessed = guessCityFromAddress(prefJp, addr);
-        if (guessed) citySet.add(guessed);
+        if (direct && String(direct).trim()) citySet.add(String(direct).trim());
       }
-    } catch {
-      /* 404 などは無視して次 */
+      if (citySet.size > 200) break;
     }
-    // 充分集まったら打ち切り
-    if (citySet.size > 200) break;
   }
 
   // 東京都はフォールバックで23区だけでも出す
