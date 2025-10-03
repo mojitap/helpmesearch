@@ -1,9 +1,9 @@
 /* public/hms4.js */
 (function () {
   function boot() {
-    const isMobile = window.matchMedia("(max-width: 640px)").matches; // SP判定
+    console.log("HMS4 v7 boot");
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
 
-    // 1) CSS
     const css = `
 .hms4-fab{position:fixed;right:20px;bottom:24px;z-index:2147483000;background:#ef476f;color:#fff;border:none;border-radius:999px;padding:12px 16px;font-weight:800;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.16);cursor:pointer}
 .hms4-fab:active{transform:translateY(1px)}
@@ -16,6 +16,7 @@
 .hms4-g8{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media(min-width:640px){.hms4-g8{grid-template-columns:repeat(4,1fr)}}
 .hms4-card{display:block;text-align:center;text-decoration:none;color:#111;background:#f6f7fb;border:1px solid #ececf1;border-radius:14px;padding:14px 12px;font:700 16px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+.hms4-card:focus{outline:3px solid #60a5fa}
 .hms4-b{display:inline-flex;gap:6px;align-items:center;padding:8px 10px;margin:6px 0 10px;border-radius:10px;background:#eef2ff;color:#1e40af;text-decoration:none;font:700 14px system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
 .hms4-pg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:768px){.hms4-pg{grid-template-columns:repeat(3,1fr)}}
@@ -24,16 +25,13 @@
 .hms4-svg{width:100%;height:auto;display:block;touch-action:manipulation}
 .hms4-svg .tile{fill:#f6f7fb;stroke:#e5e7eb;stroke-width:1}
 .hms4-svg .lbl{font:700 16px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;fill:#111;dominant-baseline:middle;text-anchor:middle}
-.hms4-svg a:focus .tile{outline:3px solid #60a5fa}
     `;
     const style = document.createElement("style");
-    style.textContent = css;
-    document.head.appendChild(style);
+    style.textContent = css; document.head.appendChild(style);
 
-    // 2) HTML
     const wrap = document.createElement("div");
     wrap.innerHTML = `
-<button class="hms4-fab" id="hms4-open">地域から探す</button>
+<button class="hms4-fab" id="hms4-open" type="button">地域から探す</button>
 <div class="hms4-ov" id="hms4-ov" aria-hidden="true">
   <div class="hms4-md" role="dialog" aria-modal="true" aria-labelledby="hms4-title">
     <h2 class="hms4-t" id="hms4-title">地域から探す</h2>
@@ -49,7 +47,6 @@
 </div>`;
     document.body.appendChild(wrap);
 
-    // 3) データ
     const REGIONS = {
       hokkaido:{name:"北海道",prefs:[["hokkaido","北海道"]]},
       tohoku:{name:"東北",prefs:[["aomori","青森"],["iwate","岩手"],["miyagi","宮城"],["akita","秋田"],["yamagata","山形"],["fukushima","福島"]]},
@@ -61,7 +58,6 @@
       kyushu:{name:"九州",prefs:[["fukuoka","福岡"],["saga","佐賀"],["nagasaki","長崎"],["kumamoto","熊本"],["oita","大分"],["miyazaki","宮崎"],["kagoshima","鹿児島"]/*,["okinawa","沖縄"]*/]}
     };
 
-    // 4) 要素参照
     const ov=document.getElementById("hms4-ov");
     const open=document.getElementById("hms4-open");
     const list=document.getElementById("hms4-list");
@@ -72,35 +68,29 @@
     const mapbox=document.getElementById("hms4-mapbox");
     const pg=document.getElementById("hms4-pg");
 
-    // 地方一覧（共通）
-    grid.innerHTML = Object.entries(REGIONS)
-      .map(([k,v]) => `<a class="hms4-card" data-k="${k}">${v.name}</a>`)
-      .join("");
+    grid.innerHTML = Object.entries(REGIONS).map(([k,v]) =>
+      `<a class="hms4-card" data-k="${k}" href="#" role="button">${v.name}</a>`
+    ).join("");
 
-    // PC: 県ボタン, SP: SVGタイルマップを出す
     function showDetail(k){
       const r = REGIONS[k];
       ttl.textContent = r.name;
 
       if (isMobile) {
         mapbox.innerHTML = makeRegionSVG(r.prefs);
-        pg.innerHTML = ""; // モバイルは画像主役（念のため下にリストは出さない）
+        pg.innerHTML = "";
       } else {
-        mapbox.innerHTML = ""; // PCは地図なしでOK（わかりやすさ優先）
+        mapbox.innerHTML = "";
         pg.innerHTML = r.prefs.map(([id,label]) => `<a class="hms4-pref" href="/?pref=${id}">${label}</a>`).join("");
       }
 
-      list.style.display='block'; // for scroll anchor
       list.style.display='none';
       detail.style.display='block';
       window.scrollTo({top:0,behavior:"smooth"});
     }
 
-    // シンプルな“画像（SVG）”タイル地図を生成（モバイル用）
     function makeRegionSVG(prefs){
-      // 2列で大きめに（タップしやすさ優先）
-      const cols = 2;
-      const tileW = 160, tileH = 74, gap = 10;
+      const cols = 2, tileW = 160, tileH = 74, gap = 10;
       const rows = Math.ceil(prefs.length / cols);
       const W = cols * tileW + (cols - 1) * gap;
       const H = rows * tileH + (rows - 1) * gap;
@@ -120,14 +110,16 @@
       return `<svg xmlns="http://www.w3.org/2000/svg" class="hms4-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="地方の都道府県地図">${body}</svg>`;
     }
 
-    // 5) ハンドラ
-    open.addEventListener("click", ()=> ov.classList.add("is-open"));
-    ov.addEventListener("click", e=>{ if(e.target===ov) ov.classList.remove("is-open"); });
+    // handlers
+    open.addEventListener("click", e=>{ e.preventDefault(); ov.classList.add("is-open"); });
+    ov.addEventListener("click", e=>{ if(e.target===ov){ e.preventDefault(); ov.classList.remove("is-open"); }});
     back.addEventListener("click", e=>{ e.preventDefault(); detail.style.display='none'; list.style.display='block'; });
-
     grid.addEventListener("click", e=>{
       const el=e.target.closest('.hms4-card'); if(!el) return;
-      showDetail(el.dataset.k);
+      e.preventDefault(); showDetail(el.dataset.k);
+    });
+    document.addEventListener("keydown", e=>{
+      if(e.key==="Escape"){ ov.classList.remove("is-open"); }
     });
   }
 
