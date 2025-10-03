@@ -15,43 +15,43 @@ const ID_TO_JP: Record<string,string> = {
 };
 const JP_TO_ID = Object.fromEntries(Object.entries(ID_TO_JP).map(([k,v])=>[v,k]));
 
-// 候補データ（まず医療/clinic、ダメなら hospital → pharmacy → 介護/day_service → tokuyou）
-const DATA_CANDIDATES = [
-  { base: "medical", kind: "clinic" },
-  { base: "medical", kind: "hospital" },
-  { base: "medical", kind: "pharmacy" },
-  { base: "care",    kind: "day_service" },
-  { base: "care",    kind: "tokuyou" },
+// 複数ソースを順に試す
+const CANDS = [
+  { base:"medical", kind:"clinic" },
+  { base:"medical", kind:"hospital" },
+  { base:"medical", kind:"pharmacy" },
+  { base:"care",    kind:"day_service" },
+  { base:"care",    kind:"tokuyou" },
 ];
 
 function extractCity(x: any): string {
-  const direct = x.city || x["市区町村"] || x["市町村"];
+  // 明示項目
+  const direct =
+    x.city || x.municipality || x.city_ward || x["市区町村"] || x["市町村"] || x["区市町村"] || x["行政区"];
   if (direct) return String(direct).trim();
+
+  // 住所から推定
   const addr = String(x.address || x["住所"] || "");
   if (!addr) return "";
-  // 住所から 市/区/町/村 までを推定
   const afterPref = addr.replace(/.*?(北海道|東京都|京都府|大阪府|.{2,3}県)/, "");
   const m = afterPref.match(/([^0-9\-\s、,（）\(\)]+?[市区町村])/);
   return m ? m[1] : "";
 }
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const prefParam = url.searchParams.get("pref") || "";
+  const u = new URL(req.url);
+  const prefParam = u.searchParams.get("pref") || "";
   if (!prefParam) return NextResponse.json({ items: [] });
 
-  // スラッグ/日本語 どちらでもOK
   const slug = JP_TO_ID[prefParam] || prefParam;
-  const jp   = ID_TO_JP[slug] || prefParam;
+  const origin = u.origin;
 
   let items: any[] = [];
-  const origin = url.origin;
-
-  for (const c of DATA_CANDIDATES) {
+  for (const c of CANDS) {
     try {
       const dataUrl = `${origin}/data/${c.base}/${c.kind}/${encodeURIComponent(slug)}.json`;
       const r = await fetch(dataUrl, { next: { revalidate: 3600 } });
-      if (r.ok) { items = await r.json(); break; }
+      if (r.ok) { items = await r.json(); if (items.length) break; }
     } catch {}
   }
 
@@ -61,9 +61,7 @@ export async function GET(req: Request) {
     if (name) set.add(name);
   }
 
-  // 結果
   return NextResponse.json({
-    pref: jp,
     items: Array.from(set).sort((a,b)=>a.localeCompare(b,"ja")),
   }, { headers: { "Cache-Control": "s-maxage=86400, stale-while-revalidate=3600" } });
 }
