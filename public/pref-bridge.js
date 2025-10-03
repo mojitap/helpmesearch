@@ -1,4 +1,4 @@
-/* public/pref-bridge.js (robust) */
+/* public/pref-bridge.js */
 (function () {
   const PREF_JP = {
     hokkaido:"北海道",
@@ -15,55 +15,54 @@
 
   function setSelectValue(sel, value) {
     sel.value = value;
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-    sel.dispatchEvent(new Event('input', { bubbles: true }));
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    sel.dispatchEvent(new Event("input",  { bubbles: true }));
   }
 
-  function findPrefSelect() {
-    const byLabel = Array.from(document.querySelectorAll('label'))
-      .find(l => /都道府県/.test(l.textContent || ''));
-    if (byLabel) {
-      const forId = byLabel.getAttribute('for');
-      const el = forId && document.getElementById(forId);
-      if (el && el.tagName === 'SELECT') return el;
-    }
-    const selects = Array.from(document.querySelectorAll('select'));
-    selects.sort((a,b)=> b.options.length - a.options.length);
-    return selects.find(s => s.options.length > 30) || selects[0] || null;
-  }
-
-  function run() {
-    const p = new URLSearchParams(location.search).get('pref');
-    if (!p) return;
+  function selectAndSearch() {
+    const p = new URLSearchParams(location.search).get("pref");
+    if (!p) return false;
 
     const sel =
       document.querySelector('select[name="prefecture"]') ||
-      document.querySelector('#prefecture') ||
+      document.querySelector("#prefecture") ||
       document.querySelector('select[aria-label="都道府県"]') ||
-      document.querySelector('select[data-role="prefecture"]') ||
-      findPrefSelect();
+      document.querySelector('select[data-role="prefecture"]');
 
-    if (!sel) return;
+    if (!sel) return false;
 
+    let matched = false;
     if ([...sel.options].some(o => o.value === p)) {
-      setSelectValue(sel, p);
+      setSelectValue(sel, p); matched = true;
     } else {
       const jp = PREF_JP[p];
-      if (jp && [...sel.options].some(o => o.value === jp || (o.textContent||'').trim() === jp)) {
-        setSelectValue(sel, jp);
-      } else {
-        return;
+      if (jp && [...sel.options].some(o => o.value === jp || o.textContent.trim() === jp)) {
+        setSelectValue(sel, jp); matched = true;
       }
     }
+    if (!matched) return false;
 
-    setTimeout(() => {
-      const btn =
-        document.querySelector('[data-search]') ||
-        document.querySelector('button[type="submit"]') ||
-        document.querySelector('button[aria-label="検索"]');
-      btn && btn.click();
-    }, 50);
+    const btn =
+      document.querySelector("[data-search]") ||
+      document.querySelector('button[type="submit"]') ||
+      document.querySelector('button[aria-label="検索"]');
+    btn && btn.click();
+    return true;
   }
 
-  window.addEventListener('load', run);
+  function waitAndRun() {
+    if (selectAndSearch()) return;
+    // セレクトがまだ DOM にない場合は監視して、出てきたら実行
+    const obs = new MutationObserver(() => {
+      if (selectAndSearch()) obs.disconnect();
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => obs.disconnect(), 7000); // 安全に自動停止
+  }
+
+  if (document.readyState === "complete") {
+    waitAndRun();
+  } else {
+    window.addEventListener("load", waitAndRun);
+  }
 })();
