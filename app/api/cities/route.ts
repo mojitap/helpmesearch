@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // 県スラッグ ↔ 日本語
 const ID_TO_PREF: Record<string, string> = {
   hokkaido:"北海道",
