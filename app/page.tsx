@@ -47,11 +47,12 @@ export default function Page() {
     "沖縄県":"okinawa",
   };
 
-  async function handleSearch(params: { keyword: string; pref?: string; category?: string }) {
+  // app/page.tsx（handleSearch だけ差し替え）
+  async function handleSearch(params: { keyword: string; pref?: string; city?: string; category?: string }) {
     setLoading(true);
     const qs = new URLSearchParams();
-
-    if (params.pref) qs.set("pref", params.pref); // ← 変換しない（そのまま日本語で送る）
+    if (params.pref) qs.set("pref", params.pref);        // 日本語のまま
+    if (params.city) qs.set("city", params.city);         // ★ 追加
     if (params.category) qs.set("kind", params.category);
     if (params.keyword) qs.set("q", params.keyword.trim());
 
