@@ -8,6 +8,7 @@ const CARE_KINDS = new Set([
 ]);
 const MED_KINDS  = new Set(["hospital","clinic","dental","pharmacy"]);
 
+// 日本語→英語スラッグのエイリアス（日本語で来てもOKにする）
 const KIND_ALIAS: Record<string,string> = {
   // 医療
   "病院":"hospital","クリニック":"clinic","診療所":"clinic","歯科":"dental","薬局":"pharmacy","調剤薬局":"pharmacy",
@@ -20,15 +21,17 @@ const KIND_ALIAS: Record<string,string> = {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const pref = searchParams.get("pref") || "";
+  const pref    = searchParams.get("pref") || "";
   const kindRaw = searchParams.get("kind") || "";
-  const q    = (searchParams.get("q") || "").toLowerCase();
-  const page = Math.max(1, Number(searchParams.get("page") || 1));
-  const size = Math.min(200, Math.max(1, Number(searchParams.get("size") || 50)));
+  const q       = (searchParams.get("q") || "").toLowerCase();
+  const page    = Math.max(1, Number(searchParams.get("page") || 1));
+  const size    = Math.min(200, Math.max(1, Number(searchParams.get("size") || 50)));
 
-  // ★ 追加：市区町村（任意）
-  const city = (searchParams.get("city") || "").toLowerCase();
+  // ★ 市区町村（任意）
+  const cityRaw = (searchParams.get("city") || "").trim();
+  const city    = cityRaw.toLowerCase();
 
+  // kind は日本語でも英語でもOK
   const kind = KIND_ALIAS[kindRaw] ?? kindRaw;
 
   const allowed = new Set<string>([...CARE_KINDS, ...MED_KINDS]);
@@ -48,32 +51,27 @@ export async function GET(req: Request) {
     all = [];
   }
 
-  // ★ ここで city / q を順に絞り込み（日本語の表記ゆれを考えて includes で部分一致）
+  // ★ city → q の順でしぼり込み
   const filtered = all.filter((x: any) => {
-    // city 指定がある場合は、市区町村 or 住所に含まれるかで判定
+    // ① 市区町村（x.city / x["市区町村"] が無いデータもあるため住所も見る）
     if (city) {
-      const inCity =
-        (x.city?.toString().toLowerCase?.() || "") ||
-        (x["市区町村"]?.toString().toLowerCase?.() || "") ||
-        (x["市町村"]?.toString().toLowerCase?.() || "") ||
-        (x.address?.toString().toLowerCase?.() || "") ||
-        (x["住所"]?.toString().toLowerCase?.() || "");
-      if (!inCity.includes(city)) return false;
+      const cityField = (
+        x.city ?? x.municipality ?? x.city_ward ?? x["市区町村"] ?? x["市町村"] ?? x["区市町村"] ?? x["行政区"] ?? ""
+      ).toString().toLowerCase();
+      const addrField = (x.address ?? x["住所"] ?? "").toString().toLowerCase();
+      if (!cityField.includes(city) && !addrField.includes(city)) return false;
     }
 
-    // キーワード検索（名称 / 住所 / 診療科）
+    // ② キーワード（名称 / 住所 / 診療科）
     if (!q) return true;
-    const name =
-      (x.name?.toLowerCase?.() ||
-        x.facility_name?.toLowerCase?.() ||
-        x.office_name?.toLowerCase?.() ||
-        x["施設名"]?.toLowerCase?.() ||
-        x["事業所名"]?.toLowerCase?.() ||
-        "");
-    const addr = (x.address?.toLowerCase?.() || x["住所"]?.toLowerCase?.() || "");
-    const deps = (
-      Array.isArray(x.departments) ? x.departments.join("、") : (x["診療科"] || "")
+    const name = (
+      x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? ""
     ).toString().toLowerCase();
+    const addr = (x.address ?? x["住所"] ?? "").toString().toLowerCase();
+    const deps = (
+      Array.isArray(x.departments) ? x.departments.join("、") : (x["診療科"] ?? "")
+    ).toString().toLowerCase();
+
     return name.includes(q) || addr.includes(q) || deps.includes(q);
   });
 
