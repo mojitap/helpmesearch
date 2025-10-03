@@ -22,7 +22,7 @@ const coerceItem = (x: any): Item => ({
     x.id ??
     `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
   name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
-  kind: x.kindLabel || x.service || x.category || "",
+  kind: x.kind ?? x.kindLabel ?? x.service ?? x.category ?? "", // ★ x.kind を最優先
   tel: x.tel ?? x["電話"] ?? x["TEL"],
   address: x.address ?? x["住所"] ?? "",
   url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
@@ -53,9 +53,7 @@ export default function Page() {
     const qs = new URLSearchParams();
 
     if (params.pref) {
-      // ★ ここで日本語→スラッグ変換（既にスラッグならそのまま）
-      const prefSlug = PREF_TO_ID[params.pref] ?? params.pref;
-      qs.set("pref", prefSlug);
+      qs.set("pref", params.pref); // ★ スラッグ変換をやめる
     }
 
     if (params.city) qs.set("city", params.city);
