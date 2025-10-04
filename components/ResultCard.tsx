@@ -55,8 +55,11 @@ export default function ResultCard({ item }: { item: Item }) {
       {/* 情報行：縦並び */}
       <div className="mt-3 space-y-1.5 text-sm">
         <p className="flex items-center gap-2">
-          <span className="inline-flex w-20 justify-center rounded bg-neutral-100 px-2 py-0.5 text-xs">🕘 通常時間</span>
-          <span className="text-neutral-800">{item.hours || "—"}</span>
+          <span className="inline-flex min-w-14 justify-center rounded bg-neutral-100 px-2 py-0.5 text-xs">🕘 通常時間</span>
+          <span className="text-neutral-800">
+            {item.hours || "—"}
+            {item.nightLabel?.startsWith("救急：") ? `／${item.nightLabel}` : ""}
+          </span>
         </p>
         <p className="flex items-center gap-2">
           <span className={`inline-flex w-20 justify-center rounded px-2 py-0.5 text-xs ${item.nightLabel ? "bg-emerald-100" : "bg-neutral-100"}`}>
