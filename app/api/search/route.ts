@@ -43,7 +43,7 @@ const KIND_ALIAS: Record<string, string> = {
   "病院":"hospital",
   "クリニック":"clinic","診療所":"clinic","医院":"clinic",
   "歯科":"dental","歯科医院":"dental","歯科クリニック":"dental",
-  "薬局":"pharmacy","調剤薬局":"pharmacy","保険薬局":"pharmacy",
+  "薬局":"pharmacy","調剤薬局":"pharmacy","保険薬局":"pharmacy","ドラッグストア":"pharmacy",
 
   // --- 介護 ---
   "特養":"tokuyou","特別養護老人ホーム":"tokuyou",
@@ -55,13 +55,6 @@ const KIND_ALIAS: Record<string, string> = {
   "夜間対応型訪問介護":"night_home_help","夜間対応":"night_home_help","夜間訪問介護":"night_home_help",
   "介護医療院":"care_medical_institute","介護療養型医療施設":"care_medical_institute",
 };
-
-const PUB = (...p: string[]) => path.join(process.cwd(), "public", ...p);
-const readJson = <T=any>(p: string): T[] => {
-  try { return JSON.parse(fs.readFileSync(p, "utf-8")); } catch { return []; }
-};
-
-const kindBase = (k: string) => (MED_KINDS.has(k) ? "medical" : "care");
 
 const normDigits = (v: any) => String(v ?? "").replace(/\D/g, "");
 const low = (v: any) => String(v ?? "").toLowerCase();
@@ -79,15 +72,15 @@ function cityMatches(row: any, cityInput: string): boolean {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const prefRaw = searchParams.get("pref") || "";
-  const pref = normalizePref(prefRaw);
+  const prefRaw = searchParams.get("pref") || "";          // 例: "岩手県" / "03" / "岩手"
+  const pref = normalizePref(prefRaw);                      // 公式名へ正規化（47都道府県対応）
 
   const origin = new URL(req.url).origin;
 
   const kindRaw =
     searchParams.get("kind") ||
-    searchParams.get("industry") ||   // ← industry でも拾う
-    searchParams.get("type") ||       // ← 念のため
+    searchParams.get("industry") ||
+    searchParams.get("type") ||
     "";
   const kind1 = KIND_ALIAS[kindRaw] ?? kindRaw;
 
@@ -106,7 +99,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ total: 0, items: [] });
   }
 
-  // 県ごとのJSONを読む（存在しないファイルはスキップ）
+  // public/data を fetch で読む
   let rows: any[] = [];
   for (const k of targetKinds) {
     const base = MED_KINDS.has(k) ? "medical" : "care";
@@ -117,7 +110,7 @@ export async function GET(req: Request) {
       const arr = (await r.json()) as any[];
       rows.push(...arr.map((r) => ({ ...r, kind: k })));
     } catch {
-      /* 404やネットワークエラーは無視 */
+      // スキップ
     }
   }
 
