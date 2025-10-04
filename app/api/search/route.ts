@@ -78,19 +78,23 @@ const readMemo = (r: any) =>
     "救急","救急告示","二次救急","三次救急"
   ].map(k => String(r?.[k] ?? "")).join(" ");
 
-// 電話番号（確実に電話系のキーだけを見る）
+// 電話番号（複数・国番号対応：最初の1番号だけ抽出）
 const readTel = (r: any) => {
   const raw = pickStr(r, [
     "tel","TEL","Tel","電話","電話番号","代表電話","phone","Phone"
   ]);
   if (!raw) return "";
-  let d = toAscii(raw).replace(/[^\d+]/g, "");
-  // 国番号始まりを国内表記へ（+81 or 81 → 0）
+  const s = toAscii(raw);
+  // +81 / 0 / 0120 の形式っぽい最初の1件だけ拾う
+  const m = s.match(
+    /(\+81[-\s]?\d{1,4}[-\s]?\d{2,4}[-\s]?\d{3,4}|0\d{1,4}[-\s]?\d{2,4}[-\s]?\d{3,4}|0120[-\s]?\d{3}[-\s]?\d{3})/
+  );
+  if (!m) return "";
+  let d = m[1].replace(/[^\d+]/g, "");
+  // 国番号 → 国内表記
   if (d.startsWith("+81")) d = "0" + d.slice(3);
-  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
-  // 10〜11桁だけを許容（それ以外は無効扱い）
-  if (d.length === 10 || d.length === 11) return d;
-  return "";
+  // 10 or 11 桁のみ採用
+  return (d.length === 10 || d.length === 11) ? d : "";
 };
 
 // ── 夜間/救急ラベル作成 ──
