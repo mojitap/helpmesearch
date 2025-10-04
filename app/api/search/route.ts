@@ -70,6 +70,32 @@ function cityMatches(row: any, cityInput: string): boolean {
   return rowName.includes(inName);
 }
 
+// 文字列をまとめて1本に（診療時間・備考・フラグ系も含める）
+const agg = (r: any) =>
+  (
+    `${r.name ?? r.facility_name ?? r.office_name ?? ""} ${r.addr ?? r.address ?? ""} ${r.tags ?? ""} ${r.industry_name ?? ""} ${r.category ?? ""} `
+    + `${r.hours ?? r.opening_hours ?? r.business_hours ?? ""} `
+    + `${r["診療時間"] ?? ""} ${r["診療時間_平日"] ?? ""} ${r["診療時間_土曜"] ?? ""} ${r["診療時間_日曜"] ?? ""} `
+    + `${r["受付時間"] ?? ""} ${r["備考"] ?? r["注記"] ?? r["特記事項"] ?? ""} `
+    + `${r["夜間"] ?? r["時間外"] ?? r["夜間対応"] ?? ""} ${r["救急"] ?? r["救急告示"] ?? r["二次救急"] ?? r["三次救急"] ?? ""} `
+  ).toString().toLowerCase();
+
+// テキスト中の時刻を拾って分に変換し、20:00 以降が含まれるかざっくり判定
+const hasNightByTime = (r: any) => {
+  const t = agg(r);
+  const times = [...t.matchAll(/([01]?\d|2[0-3])[：:]?([0-5]\d)?/g)]
+    .map(m => (+m[1]) * 60 + (m[2] ? +m[2] : 0));
+  return times.some(min => min >= 20 * 60);
+};
+
+// 「夜間対応」らしい文言があるか
+const hasNightMark = (r: any) =>
+  /(夜間|深夜|時間外|当直|24時間|ナイト)/i.test(agg(r));
+
+// 「救急対応」らしい文言があるか
+const hasEmergencyMark = (r: any) =>
+  /(救急|er|救急告示|二次救急|三次救急)/i.test(agg(r));
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const prefRaw = searchParams.get("pref") || "";          // 例: "岩手県" / "03" / "岩手"
@@ -117,10 +143,18 @@ export async function GET(req: Request) {
   // 県名以外のフィルタ
   if (cityParam) rows = rows.filter(r => cityMatches(r, cityParam));
   if (q) {
-    rows = rows.filter(r => {
-      const hay = low(`${r.name ?? r.facility_name ?? ""} ${r.addr ?? ""} ${r.tags ?? ""} ${r.industry_name ?? ""} ${r.category ?? ""}`);
-      return hay.includes(q);
-    });
+    const wantsNight     = /(夜|夜間|深夜|時間外|当直|24時間)/i.test(q);
+    const wantsEmergency = /(救急|er)/i.test(q);
+
+    if (wantsNight || wantsEmergency) {
+      rows = rows.filter(r => {
+        const okNight = wantsNight ? (hasNightMark(r) || hasNightByTime(r)) : true;
+        const okEmr   = wantsEmergency ? hasEmergencyMark(r) : true;
+        return okNight && okEmr;
+      });
+    } else {
+      rows = rows.filter(r => agg(r).includes(q)); // 従来の部分一致（但し対象フィールドを拡張）
+    }
   }
 
   // ページング
