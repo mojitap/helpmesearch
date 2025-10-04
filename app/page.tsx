@@ -15,37 +15,79 @@ type Item = {
   tags?: string[];
   url?: string;
   pref?: string;
+  hours?: string;
+  nightLabel?: string;
+  closed?: string;
 };
 
-const coerceItem = (x: any): Item => ({
-  id:
-    x.id ??
-    `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
-  name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
-  kind: x.kind ?? x.kindLabel ?? x.service ?? x.category ?? "", // ★ x.kind を最優先
-  tel: x.tel ?? x["電話"] ?? x["TEL"],
-  address: x.address ?? x["住所"] ?? "",
-  url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
-  pref: x.pref ?? x["都道府県"],
-});
+const toAscii = (s: string) =>
+  (s || "")
+    .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
+    .replace(/：/g, ":");
+
+// 「20:00 以降」の最大時刻を拾って "〜HH:MM" を返す（無ければ null）
+function pickNightTail(raw?: string): string | null {
+  if (!raw) return null;
+  const t = toAscii(raw);
+  const pm = /午後|PM/i.test(t); // 「午後8時」→ 20時 に寄せる
+  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?:[:：]([0-5]\d)|時)/g;
+  const mins = [...t.matchAll(re)].map(m => {
+    let h = +m[1];
+    const mm = m[2] ? +m[2] : 0;
+    if (pm && h < 12) h += 12;
+    return h * 60 + mm;
+  });
+  const max = Math.max(...mins, -1);
+  if (max >= 20 * 60) {
+    const hh = String(Math.floor(max / 60)).padStart(2, "0");
+    const mm = String(max % 60).padStart(2, "0");
+    return `〜${hh}:${mm}`;
+  }
+  return null;
+}
+
+// カード表示用フィールドを原データから生成
+function deriveDisplayFields(x: any) {
+  const hours =
+    x["診療時間_平日"] ??
+    x["診療時間"] ??
+    x.hours ?? x.opening_hours ?? x.business_hours ?? x["営業時間"] ?? "";
+
+  const memoLike = `${x["備考"] ?? ""} ${x["注記"] ?? ""} ${x["特記事項"] ?? ""} ${x["夜間"] ?? ""} ${x["時間外"] ?? ""} ${x["夜間対応"] ?? ""}`;
+
+  const nightTail  = pickNightTail(`${hours} ${memoLike}`);
+  const nightMark  = /(夜|夜診|準夜|夜間|深夜|時間外|当直|24 ?時間|夜間診療|夜間受付|夜間救急|休日夜間)/i.test(`${hours} ${memoLike}`);
+  const nightLabel = nightTail ?? (nightMark ? "対応あり" : "");
+
+  const closed =
+    x["休診日"] ?? x["定休日"] ?? x["休業日"] ?? x["休み"] ?? "";
+
+  return { hours, nightLabel, closed };
+}
+
+const coerceItem = (x: any): Item => {
+  const { hours, nightLabel, closed } = deriveDisplayFields(x);
+
+  return {
+    id:
+      x.id ??
+      `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
+    name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
+    kind: x.kind ?? x.kindLabel ?? x.service ?? x.category ?? "",
+    tel: x.tel ?? x["電話"] ?? x["TEL"],
+    address: x.address ?? x["住所"] ?? "",
+    url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
+    pref: x.pref ?? x["都道府県"],
+    // ▼ 追加分（カードで縦表示）
+    hours,
+    nightLabel,
+    closed,
+  };
+};
 
 export default function Page() {
   const [results, setResults] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // 日本語 -> スラッグ 変換
-  const PREF_TO_ID: Record<string, string> = {
-    "北海道":"hokkaido",
-    "青森県":"aomori","岩手県":"iwate","宮城県":"miyagi","秋田県":"akita","山形県":"yamagata","福島県":"fukushima",
-    "茨城県":"ibaraki","栃木県":"tochigi","群馬県":"gunma","埼玉県":"saitama","千葉県":"chiba","東京都":"tokyo","神奈川県":"kanagawa",
-    "新潟県":"niigata","富山県":"toyama","石川県":"ishikawa","福井県":"fukui","山梨県":"yamanashi","長野県":"nagano",
-    "岐阜県":"gifu","静岡県":"shizuoka","愛知県":"aichi",
-    "三重県":"mie","滋賀県":"shiga","京都府":"kyoto","大阪府":"osaka","兵庫県":"hyogo","奈良県":"nara","和歌山県":"wakayama",
-    "鳥取県":"tottori","島根県":"shimane","岡山県":"okayama","広島県":"hiroshima","山口県":"yamaguchi",
-    "徳島県":"tokushima","香川県":"kagawa","愛媛県":"ehime","高知県":"kochi",
-    "福岡県":"fukuoka","佐賀県":"saga","長崎県":"nagasaki","熊本県":"kumamoto","大分県":"oita","宮崎県":"miyazaki","鹿児島県":"kagoshima",
-    "沖縄県":"okinawa",
-  };
 
   // app/page.tsx（handleSearch だけ差し替え）
   async function handleSearch(params: { keyword: string; pref?: string; city?: string; category?: string }) {
