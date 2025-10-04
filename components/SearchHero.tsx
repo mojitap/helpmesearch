@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { KIND_OPTIONS, PREFS_47 } from "@/app/lib/jp";
 
-// 日本語→スラッグ（フォーム内で都市一覧取得に使う）
 const PREF_TO_ID: Record<string, string> = {
   北海道:"hokkaido", 青森県:"aomori", 岩手県:"iwate", 宮城県:"miyagi", 秋田県:"akita", 山形県:"yamagata", 福島県:"fukushima",
   茨城県:"ibaraki", 栃木県:"tochigi", 群馬県:"gunma", 埼玉県:"saitama", 千葉県:"chiba", 東京都:"tokyo", 神奈川県:"kanagawa",
@@ -29,7 +28,13 @@ export default function SearchHero({
   const [cities, setCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
-  // 県が変わったら /api/cities から市区町村候補を取得（なければ空配列）
+  // エラーメッセージ
+  const [formError, setFormError] = useState<string>("");
+
+  // 県だけ選ばれているか（ボタン無効化にも使用）
+  const isPrefOnly = useMemo(() => !!pref && !city && !category, [pref, city, category]);
+
+  // 県が変わったら市区町村候補を取得
   useEffect(() => {
     setCity("");
     setCities([]);
@@ -38,13 +43,12 @@ export default function SearchHero({
     const slug = PREF_TO_ID[pref] ?? pref; // pref がスラッグでも可
     setLoadingCities(true);
     fetch(`/api/cities?pref=${encodeURIComponent(slug)}`, { cache: "force-cache" })
-      .then(r => r.ok ? r.json() : { items: [] })
+      .then(r => (r.ok ? r.json() : { items: [] }))
       .then(data => setCities(Array.isArray(data.items) ? data.items : []))
       .catch(() => setCities([]))
       .finally(() => setLoadingCities(false));
   }, [pref]);
 
-  // 送信用の city 値（セレクトが無い県はテキスト入力でOK）
   const canSelectCity = useMemo(() => cities.length > 0, [cities]);
 
   return (
@@ -61,6 +65,14 @@ export default function SearchHero({
           aria-label="施設検索"
           onSubmit={(e) => {
             e.preventDefault();
+            setFormError("");
+
+            // 県のみは却下（市区町村 or 業種のどちらか必須）
+            if (pref && !city && !category) {
+              setFormError("都道府県に加えて、市区町村 か 業種 を選んでください。");
+              return;
+            }
+
             onSearch({
               pref: pref || undefined,
               city: city || undefined,
@@ -74,7 +86,7 @@ export default function SearchHero({
             id="prefecture"
             name="prefecture"
             aria-label="都道府県"
-            data-role="prefecture" // ← pref-bridge 用
+            data-role="prefecture"
             value={pref}
             onChange={(e) => setPref(e.target.value)}
             className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
@@ -95,6 +107,7 @@ export default function SearchHero({
               value={city}
               onChange={(e) => setCity(e.target.value)}
               disabled={!pref || loadingCities}
+              aria-invalid={isPrefOnly ? true : undefined}
               className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
                          text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:col-span-2"
             >
@@ -112,6 +125,7 @@ export default function SearchHero({
               onChange={(e) => setCity(e.target.value)}
               placeholder="市区町村"
               disabled={!pref}
+              aria-invalid={isPrefOnly ? true : undefined}
               className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
                          text-neutral-900 placeholder:text-neutral-400
                          focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:col-span-2"
@@ -122,9 +136,10 @@ export default function SearchHero({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            aria-label="業種"
+            aria-invalid={isPrefOnly ? true : undefined}
             className="rounded-lg border border-neutral-300 bg-white px-3 py-2 shadow-sm
                        text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            aria-label="業種"
           >
             <option value="">業種</option>
             {KIND_OPTIONS.map((o) => (
@@ -143,9 +158,24 @@ export default function SearchHero({
                        focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
 
-          {/* 5) 検索ボタン */}
+          {/* エラーメッセージ（ボタンの上） */}
+          {formError && (
+            <p className="sm:col-span-5 text-sm text-red-600" aria-live="polite" id="search-error">
+              {formError}
+            </p>
+          )}
+
+          {/* 検索ボタン（県のみのとき無効化） */}
           <div className="sm:col-span-5 flex justify-end">
-            <button type="submit" data-search className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
+            <button
+              type="submit"
+              data-search
+              disabled={isPrefOnly}
+              aria-describedby={formError ? "search-error" : undefined}
+              title={isPrefOnly ? "都道府県に加えて、市区町村 か 業種 を選んでください" : ""}
+              className={`rounded-lg px-4 py-2 font-semibold text-white
+                          ${isPrefOnly ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+            >
               検索
             </button>
           </div>
