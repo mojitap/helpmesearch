@@ -31,6 +31,135 @@ function normalizePref(input: string): string {
 }
 // ---------------------------------------------------------------
 
+// ===== 表示用フィールド生成ヘルパー =====
+
+// 住所を除いた時間系テキスト（時刻抽出用）
+const timeText = (r: any) => `${readHours(r)} ${readMemo(r)}`;
+
+// 20:00以降が含まれるか（「午後/PM」表記も考慮）
+const hasNightByTime = (r: any) => {
+  const t = toAscii(timeText(r));
+  const pm = /午後|PM/i.test(t);
+  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?::([0-5]\d)|時)/g;
+  const times = [...t.matchAll(re)].map(m => {
+    let h = +m[1]; const mm = m[2] ? +m[2] : 0;
+    if (pm && h < 12) h += 12;
+    return h * 60 + mm;
+  });
+  return times.some(min => min >= 20 * 60);
+};
+
+const toAscii = (s: string) =>
+  (s || "")
+    .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
+    .replace(/[：－―ー〜～]/g, m => (m === "：" ? ":" : "～"));
+
+const pickStr = (obj: any, keys: string[]) => {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v != null && String(v).trim()) return String(v).trim();
+  }
+  return "";
+};
+
+// 営業時間・休診・メモ
+const readHours = (r: any) =>
+  pickStr(r, [
+    "診療時間_平日", "診療時間", "外来診療時間", "外来受付時間",
+    "営業時間", "hours", "opening_hours", "business_hours"
+  ]);
+
+const readClosed = (r: any) =>
+  pickStr(r, ["休診日", "定休日", "休業日", "休館日", "休み"]);
+
+const readMemo = (r: any) =>
+  [
+    "備考","注記","特記事項","夜間","時間外","夜間対応",
+    "救急","救急告示","二次救急","三次救急"
+  ].map(k => String(r?.[k] ?? "")).join(" ");
+
+// 電話番号（確実に電話系のキーだけを見る）
+const readTel = (r: any) => {
+  const raw = pickStr(r, [
+    "tel","TEL","Tel","電話","電話番号","代表電話","phone","Phone"
+  ]);
+  if (!raw) return "";
+  let d = toAscii(raw).replace(/[^\d+]/g, "");
+  // 国番号始まりを国内表記へ（+81 or 81 → 0）
+  if (d.startsWith("+81")) d = "0" + d.slice(3);
+  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
+  // 10〜11桁だけを許容（それ以外は無効扱い）
+  if (d.length === 10 || d.length === 11) return d;
+  return "";
+};
+
+// ── 夜間/救急ラベル作成 ──
+const NIGHT_RE = /(夜|夜診|準夜|夜間|深夜|時間外|当直|24 ?時間|夜間診療|夜間受付|夜間救急|休日夜間)/i;
+const EMERGENCY_RE = /(救急|ER|ＥＲ|救急外来|救命|救急告示|二次救急|三次救急)/i;
+
+const hasNightMark = (r: any) => NIGHT_RE.test(agg(r));
+const hasEmergencyMark = (r: any) => EMERGENCY_RE.test(agg(r));
+
+// 20:00 以降の最大時刻があれば "〜HH:MM"
+const nightTail = (text: string) => {
+  const t = toAscii(text);
+  const pm = /午後|PM/i.test(t);
+  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?::([0-5]\d)|時)/g;
+  const mins = [...t.matchAll(re)].map(m => {
+    let h = +m[1]; const mm = m[2] ? +m[2] : 0;
+    if (pm && h < 12) h += 12;
+    return h * 60 + mm;
+  });
+  if (!mins.length) return "";
+  const max = Math.max(...mins);
+  if (max >= 20 * 60) {
+    const hh = String(Math.floor(max / 60)).padStart(2, "0");
+    const mm = String(max % 60).padStart(2, "0");
+    return `〜${hh}:${mm}`;
+  }
+  return "";
+};
+
+// 時間帯「HH:MM〜(翌)?HH:MM」を拾って "救急：…"
+const emergencyRange = (text: string) => {
+  const t = toAscii(text);
+
+  // 1) 「救急/夜間/時間外」ラベル直後の時間帯を優先
+  const lbl =
+    t.match(/(?:救急|夜間|時間外)[^0-9]*([0-2]?\d)(?::([0-5]\d))?\s*[～~\-]\s*(翌|翌日)?\s*([0-2]?\d)(?::([0-5]\d))?/i);
+
+  // 2) なければ文中の最後の時間帯を採用（通常→救急の順で並ぶデータ対策）
+  const all = Array.from(
+    t.matchAll(/([0-2]?\d)(?::([0-5]\d))?\s*[～~\-]\s*(翌|翌日)?\s*([0-2]?\d)(?::([0-5]\d))?/gi)
+  );
+  const m = lbl ?? (all.length ? all[all.length - 1] : null);
+  if (!m) return "";
+
+  const fmt = (h: string, mm?: string) =>
+    `${String(+h).padStart(2, "0")}:${String(mm ? +mm : 0).padStart(2, "0")}`;
+  const head = fmt(m[1], m[2]);
+  const tail = `${m[3] ? "翌" : ""}${fmt(m[4], m[5])}`;
+  return `救急：${head}〜${tail}`;
+};
+
+// 施設1件から hours / nightLabel / closed / tel を生成
+const decorate = (r: any) => {
+  let hours = readHours(r);
+  const closed = readClosed(r);
+  const tel = readTel(r);
+  const memo = readMemo(r);
+  const bag = `${hours} ${memo}`;
+
+  let nightLabel = "";
+  if (EMERGENCY_RE.test(bag)) {
+    nightLabel = emergencyRange(bag) || "救急対応";
+  }
+  if (!nightLabel && NIGHT_RE.test(bag)) {
+    nightLabel = nightTail(bag) || "対応あり";
+  }
+  return { hours, nightLabel, closed, tel };
+};
+
 const CARE_KINDS = new Set([
   "tokuyou","rouken","home_help","day_service",
   "community_day_service","regular_patrol_nursing",
@@ -69,42 +198,6 @@ const agg = (r: any) =>
     + `${r["受付時間"] ?? ""} ${r["備考"] ?? r["注記"] ?? r["特記事項"] ?? ""} `
     + `${r["夜間"] ?? r["時間外"] ?? r["夜間対応"] ?? ""} ${r["救急"] ?? r["救急告示"] ?? r["二次救急"] ?? r["三次救急"] ?? ""} `
   ).toString().toLowerCase();
-
-// 2) 時刻抽出は住所を除いたテキストだけを見る
-const timeText = (r: any) =>
-  (
-    `${r.hours ?? r.opening_hours ?? r.business_hours ?? ""} `
-    + `${r["診療時間"] ?? ""} ${r["診療時間_平日"] ?? ""} ${r["診療時間_土曜"] ?? ""} ${r["診療時間_日曜"] ?? ""} `
-    + `${r["受付時間"] ?? ""} ${r["備考"] ?? r["注記"] ?? r["特記事項"] ?? ""}`
-  ).toString();
-
-// 3) 正規表現（夜・救急の語彙）
-const NIGHT_RE = /(夜|夜診|準夜|夜間|深夜|時間外|当直|24 ?時間|夜間診療|夜間受付|夜間救急|休日夜間)/i;
-const EMERGENCY_RE = /(救急|ER|ＥＲ|救急外来|救命|救急告示|二次救急|三次救急)/i;
-
-// 4) 20:00以降が含まれるか（誤検知防止の新式）
-const toAscii = (s:string) =>
-  s.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
-   .replace(/：/g, ":");
-
-const hasNightByTime = (r:any) => {
-  let t = toAscii(timeText(r));
-  // 「午後10時」「PM 8:00」も 24h 相当に寄せる（簡易）
-  const pm = /午後|PM/i.test(t);
-  // 20:00 / 20:00 / 20時
-  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?:[::]([0-5]\d)|時)/g;
-  const times = [...t.matchAll(re)].map(m => {
-    let h = +m[1];
-    const mnt = m[2] ? +m[2] : 0;
-    if (pm && h < 12) h += 12; // 午後8時 → 20時
-    return h * 60 + mnt;
-  });
-  return times.some(min => min >= 20 * 60);
-};
-
-// 5) マーク検出（ここで agg を使ってOK：すでに上で定義済み）
-const hasNightMark = (r: any) => NIGHT_RE.test(agg(r));
-const hasEmergencyMark = (r: any) => EMERGENCY_RE.test(agg(r));
 
 // 6) 市区町村フィルタ（これはどこでも良いが、この後で）
 function cityMatches(row: any, cityInput: string): boolean {
@@ -155,7 +248,12 @@ export async function GET(req: Request) {
       const r = await fetch(url, { cache: "force-cache" });
       if (!r.ok) continue;
       const arr = (await r.json()) as any[];
-      rows.push(...arr.map((r) => ({ ...r, kind: k })));
+      rows.push(
+        ...arr.map((raw) => {
+          const extra = decorate(raw);
+          return { ...raw, ...extra, kind: k };
+        })
+      );
     } catch {
       // スキップ
     }
