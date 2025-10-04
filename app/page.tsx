@@ -65,20 +65,23 @@ function deriveDisplayFields(x: any) {
   return { hours, nightLabel, closed };
 }
 
+// 先にある deriveDisplayFields は残してOKですが、まず x の値を優先します
 const coerceItem = (x: any): Item => {
-  const { hours, nightLabel, closed } = deriveDisplayFields(x);
+  // 可能な限りサーバ付与の値をそのまま使う
+  const hours      = x.hours ?? "";      // decorate 済
+  const nightLabel = x.nightLabel ?? ""; // decorate 済（例：救急：20:00〜09:00 / 〜23:00）
+  const closed     = x.closed ?? "";     // decorate 済
+  const tel        = x.tel ?? x["電話"] ?? x["TEL"]; // decorate 済を優先
 
   return {
-    id:
-      x.id ??
-      `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
+    id: x.id ??
+        `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
     name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
     kind: x.kind ?? x.kindLabel ?? x.service ?? x.category ?? "",
-    tel: x.tel ?? x["電話"] ?? x["TEL"],
+    tel,
     address: x.address ?? x["住所"] ?? "",
     url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
     pref: x.pref ?? x["都道府県"],
-    // ▼ 追加分（カードで縦表示）
     hours,
     nightLabel,
     closed,
