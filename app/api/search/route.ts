@@ -56,21 +56,11 @@ const KIND_ALIAS: Record<string, string> = {
   "介護医療院":"care_medical_institute","介護療養型医療施設":"care_medical_institute",
 };
 
+// 先に共通ユーティリティ
 const normDigits = (v: any) => String(v ?? "").replace(/\D/g, "");
 const low = (v: any) => String(v ?? "").toLowerCase();
 
-// 市区町村フィルタ（コード/名称どちらでも可・部分一致OK）
-function cityMatches(row: any, cityInput: string): boolean {
-  if (!cityInput) return true;
-  const inCode = normDigits(cityInput);
-  const rowCode = normDigits(row.city_code ?? row.muni_code ?? row.city);
-  if (inCode && rowCode) return rowCode.startsWith(inCode);
-  const inName = low(cityInput);
-  const rowName = low(row.city_name ?? row.city ?? row["市区町村名"]);
-  return rowName.includes(inName);
-}
-
-// 文字列をまとめて1本に（診療時間・備考・フラグ系も含める）
+// 1) 検索対象テキスト（名前/住所/診療時間/備考などを結合して小文字化）
 const agg = (r: any) =>
   (
     `${r.name ?? r.facility_name ?? r.office_name ?? ""} ${r.addr ?? r.address ?? ""} ${r.tags ?? ""} ${r.industry_name ?? ""} ${r.category ?? ""} `
@@ -80,21 +70,52 @@ const agg = (r: any) =>
     + `${r["夜間"] ?? r["時間外"] ?? r["夜間対応"] ?? ""} ${r["救急"] ?? r["救急告示"] ?? r["二次救急"] ?? r["三次救急"] ?? ""} `
   ).toString().toLowerCase();
 
-// テキスト中の時刻を拾って分に変換し、20:00 以降が含まれるかざっくり判定
-const hasNightByTime = (r: any) => {
-  const t = agg(r);
-  const times = [...t.matchAll(/([01]?\d|2[0-3])[：:]?([0-5]\d)?/g)]
-    .map(m => (+m[1]) * 60 + (m[2] ? +m[2] : 0));
+// 2) 時刻抽出は住所を除いたテキストだけを見る
+const timeText = (r: any) =>
+  (
+    `${r.hours ?? r.opening_hours ?? r.business_hours ?? ""} `
+    + `${r["診療時間"] ?? ""} ${r["診療時間_平日"] ?? ""} ${r["診療時間_土曜"] ?? ""} ${r["診療時間_日曜"] ?? ""} `
+    + `${r["受付時間"] ?? ""} ${r["備考"] ?? r["注記"] ?? r["特記事項"] ?? ""}`
+  ).toString();
+
+// 3) 正規表現（夜・救急の語彙）
+const NIGHT_RE = /(夜|夜診|準夜|夜間|深夜|時間外|当直|24 ?時間|夜間診療|夜間受付|夜間救急|休日夜間)/i;
+const EMERGENCY_RE = /(救急|ER|ＥＲ|救急外来|救命|救急告示|二次救急|三次救急)/i;
+
+// 4) 20:00以降が含まれるか（誤検知防止の新式）
+const toAscii = (s:string) =>
+  s.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
+   .replace(/：/g, ":");
+
+const hasNightByTime = (r:any) => {
+  let t = toAscii(timeText(r));
+  // 「午後10時」「PM 8:00」も 24h 相当に寄せる（簡易）
+  const pm = /午後|PM/i.test(t);
+  // 20:00 / 20:00 / 20時
+  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?:[::]([0-5]\d)|時)/g;
+  const times = [...t.matchAll(re)].map(m => {
+    let h = +m[1];
+    const mnt = m[2] ? +m[2] : 0;
+    if (pm && h < 12) h += 12; // 午後8時 → 20時
+    return h * 60 + mnt;
+  });
   return times.some(min => min >= 20 * 60);
 };
 
-// 「夜間対応」らしい文言があるか
-const hasNightMark = (r: any) =>
-  /(夜間|深夜|時間外|当直|24時間|ナイト)/i.test(agg(r));
+// 5) マーク検出（ここで agg を使ってOK：すでに上で定義済み）
+const hasNightMark = (r: any) => NIGHT_RE.test(agg(r));
+const hasEmergencyMark = (r: any) => EMERGENCY_RE.test(agg(r));
 
-// 「救急対応」らしい文言があるか
-const hasEmergencyMark = (r: any) =>
-  /(救急|er|救急告示|二次救急|三次救急)/i.test(agg(r));
+// 6) 市区町村フィルタ（これはどこでも良いが、この後で）
+function cityMatches(row: any, cityInput: string): boolean {
+  if (!cityInput) return true;
+  const inCode = normDigits(cityInput);
+  const rowCode = normDigits(row.city_code ?? row.muni_code ?? row.city);
+  if (inCode && rowCode) return rowCode.startsWith(inCode);
+  const inName = low(cityInput);
+  const rowName = low(row.city_name ?? row.city ?? row["市区町村名"]);
+  return rowName.includes(inName);
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -142,26 +163,38 @@ export async function GET(req: Request) {
 
   // 県名以外のフィルタ
   if (cityParam) rows = rows.filter(r => cityMatches(r, cityParam));
+
   if (q) {
-    const wantsNight     = /(夜|夜間|深夜|時間外|当直|24時間)/i.test(q);
-    const wantsEmergency = /(救急|er)/i.test(q);
+    const wantsNight     = NIGHT_RE.test(q);
+    const wantsEmergency = EMERGENCY_RE.test(q);
 
     if (wantsNight || wantsEmergency) {
       rows = rows.filter(r => {
-        const okNight = wantsNight ? (hasNightMark(r) || hasNightByTime(r)) : true;
-        const okEmr   = wantsEmergency ? hasEmergencyMark(r) : true;
-        return okNight && okEmr;
+        const text = agg(r);
+        const nightOk = wantsNight
+          // マーク or 時刻 or 「夜」単体が本文に含まれる（後方互換）
+          ? (hasNightMark(r) || hasNightByTime(r) || /夜/.test(text))
+          : true;
+        const emOk = wantsEmergency ? hasEmergencyMark(r) : true;
+        return nightOk && emOk;
       });
     } else {
-      rows = rows.filter(r => agg(r).includes(q)); // 従来の部分一致（但し対象フィールドを拡張）
+      // 従来の部分一致（agg は name/住所/診療時間/備考などを結合済み）
+      rows = rows.filter(r => agg(r).includes(q));
     }
   }
 
   // ページング
+  // ページング
   const total = rows.length;
   const start = (page - 1) * size;
+
+  // ★ 空文字ソート回避のための名前取得ヘルパー（ここに追加）
+  const getName = (x: any) =>
+    x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "";
+
   const items = rows
-    .sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? "")))
+    .sort((a, b) => String(getName(a)).localeCompare(String(getName(b)), "ja"))
     .slice(start, start + size);
 
   return NextResponse.json({ total, items });
