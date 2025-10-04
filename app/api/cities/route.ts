@@ -75,6 +75,16 @@ function guessCityFromAddress(prefJp: string, addr: string): string | null {
   return null;
 }
 
+// URL から JSON を読む（fetch 先行）
+const readJSONurl = async <T = any>(url: string): Promise<T[]> => {
+  try {
+    const r = await fetch(url, { next: { revalidate: 3600 } });
+    return r.ok ? (await r.json()) as T[] : [];
+  } catch {
+    return [];
+  }
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const prefParam = (searchParams.get("pref") || "").trim();
@@ -83,19 +93,35 @@ export async function GET(req: Request) {
   const { prefJp, slug } = normalizePref(prefParam);
   if (!prefJp) return NextResponse.json({ items: [] });
 
+  const origin = new URL(req.url).origin;
   const PUB = (...p: string[]) => path.join(process.cwd(), "public", ...p);
   const readJSON = <T = any>(p: string): T[] => {
     try { return JSON.parse(fs.readFileSync(p, "utf-8")); } catch { return []; }
   };
 
-  // まず pref 専用の市区町村リストがあればそれを使う（public/data/pref/<県名>.json）
-  const direct = PUB("data","pref",`${prefJp}.json`);
-  if (fs.existsSync(direct)) {
-    const arr = readJSON<any>(direct);
-    const items = arr
-      .map(x => String(x.name ?? x.city_name ?? x.city ?? "").trim())
-      .filter(Boolean)
-      .sort((a,b)=>a.localeCompare(b,"ja"));
+  // まず pref 専用の市区町村リストがあればそれを使う（fetch 先行）
+  const directUrl = `${origin}/data/pref/${encodeURIComponent(prefJp)}.json`;
+  let arr = await readJSONurl<any>(directUrl);
+
+  if (arr.length === 0) {
+    const direct = PUB("data","pref",`${prefJp}.json`);
+    if (fs.existsSync(direct)) arr = readJSON<any>(direct);
+  }
+
+  if (arr.length > 0) {
+    const collator = new Intl.Collator("ja", { usage: "sort", sensitivity: "base", numeric: true });
+    const recs = arr.map((x: any) => ({
+      name: String(x.name ?? x.city_name ?? x.city ?? "").trim(),
+      yomi: String(x.kana ?? x.yomi ?? x.reading ?? x.ruby ?? "").trim(),
+    })).filter(r => r.name);
+
+    recs.sort((a, b) => {
+      const ak = a.yomi || a.name;
+      const bk = b.yomi || b.name;
+      return collator.compare(ak, bk) || collator.compare(a.name, b.name);
+    });
+
+    const items = recs.map(r => r.name);
     return NextResponse.json(
       { items },
       { headers: { "Cache-Control": "s-maxage=86400, stale-while-revalidate=3600" } }
@@ -104,11 +130,15 @@ export async function GET(req: Request) {
 
   const citySet = new Set<string>();
 
-  // medical から寄せ集め
+  // medical から寄せ集め（fetch → fs フォールバック）
   for (const k of MED_KINDS) {
-    const p = PUB("data","medical",k,`${prefJp}.json`);
-    if (!fs.existsSync(p)) continue;
-    for (const x of readJSON<any>(p)) {
+    const url = `${origin}/data/medical/${k}/${encodeURIComponent(prefJp)}.json`;
+    let list = await readJSONurl<any>(url);
+    if (list.length === 0) {
+      const p = PUB("data","medical",k,`${prefJp}.json`);
+      if (fs.existsSync(p)) list = readJSON<any>(p);
+    }
+    for (const x of list) {
       const direct =
         x.city || x.municipality || x.city_ward ||
         x["市区町村"] || x["市町村"] || x["区市町村"] || x["行政区"];
@@ -118,17 +148,21 @@ export async function GET(req: Request) {
       }
       const addr = (x.address || x["住所"] || "").toString();
       const guessed = guessCityFromAddress(prefJp, addr);
-      if (guessed) citySet.add(guessed);
+      if (guessed) citySet.add(guessed.trim()); // ← trim の保険
     }
     if (citySet.size > 200) break;
   }
 
-  // medicalで集まらなければ care も見る
+  // medicalで集まらなければ care も見る（fetch → fs フォールバック）
   if (citySet.size < 1) {
     for (const k of CARE_KINDS) {
-      const p = PUB("data","care",k,`${prefJp}.json`);
-      if (!fs.existsSync(p)) continue;
-      for (const x of readJSON<any>(p)) {
+      const url = `${origin}/data/care/${k}/${encodeURIComponent(prefJp)}.json`;
+      let list = await readJSONurl<any>(url);
+      if (list.length === 0) {
+        const p = PUB("data","care",k,`${prefJp}.json`);
+        if (fs.existsSync(p)) list = readJSON<any>(p);
+      }
+      for (const x of list) {
         const direct =
           x.city || x.municipality || x.city_ward ||
           x["市区町村"] || x["市町村"] || x["区市町村"] || x["行政区"];
@@ -143,7 +177,10 @@ export async function GET(req: Request) {
     TOKYO_WARDS.forEach(w => citySet.add(w));
   }
 
-  const items = Array.from(citySet).sort((a,b) => a.localeCompare(b, "ja"));
+  // jaコレーター（数字の混在にも強い）
+  const collator = new Intl.Collator("ja", { usage: "sort", sensitivity: "base", numeric: true });
+  const items = Array.from(citySet).sort((a, b) => collator.compare(a, b));
+
   return NextResponse.json(
     { items },
     { headers: { "Cache-Control": "s-maxage=86400, stale-while-revalidate=3600" } }
