@@ -62,11 +62,32 @@ const pickStr = (obj: any, keys: string[]) => {
   return "";
 };
 
-// 営業時間・休診・メモ
+// 個別キーを並べて1行にまとめる（平日/土/日 があれば "平日:… / 土:… / 日:…" に）
+const combineDaily = (r: any, plan: Array<[string, string]>) => {
+  const parts: string[] = [];
+  for (const [key, label] of plan) {
+    const v = r?.[key];
+    if (v != null && String(v).trim()) parts.push(`${label}:${String(v).trim()}`);
+  }
+  return parts.join(" / ");
+};
+
+// 医療 + 介護の代表的なキーを拾う
 const readHours = (r: any) =>
+  // まずは1フィールドで完結している候補を優先
   pickStr(r, [
+    // 医療系
     "診療時間_平日", "診療時間", "外来診療時間", "外来受付時間",
-    "営業時間", "hours", "opening_hours", "business_hours"
+    // 介護系
+    "サービス提供時間", "営業時間",
+    // 共通/英語
+    "hours", "opening_hours", "business_hours", "営業時間_平日", "営業時間（平日）",
+  ]) ||
+  // だめなら曜日別を合体
+  combineDaily(r, [
+    ["サービス提供時間_平日","平日"], ["サービス提供時間_土曜","土"], ["サービス提供時間_日曜","日"],
+    ["診療時間_平日","平日"], ["診療時間_土曜","土"], ["診療時間_日曜","日"],
+    ["営業時間_平日","平日"], ["営業時間_土曜","土"], ["営業時間_日曜","日"],
   ]);
 
 const readClosed = (r: any) =>
@@ -74,8 +95,11 @@ const readClosed = (r: any) =>
 
 const readMemo = (r: any) =>
   [
-    "備考","注記","特記事項","夜間","時間外","夜間対応",
-    "救急","救急告示","二次救急","三次救急"
+    "備考","注記","特記事項",
+    // care系の補足も拾う
+    "営業日時備考","サービス提供時間備考","連絡事項",
+    // 夜間/救急などのフラグ
+    "夜間","時間外","夜間対応","救急","救急告示","二次救急","三次救急",
   ].map(k => String(r?.[k] ?? "")).join(" ");
 
 // 電話番号（複数・国番号対応：最初の1番号だけ抽出）
