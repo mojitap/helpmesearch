@@ -224,14 +224,21 @@ function pivotHours(hoursRows: any[]) {
   const map = new Map<string, Record<Day, Array<[string,string]>>>();
   for (const r of hoursRows) {
     const id = String(r["医療機関コード"]);
-    const d = normalizeDay(r["曜日"]); 
+    const d = normalizeDay(r["曜日"]);           // Day | ""
     const s = toHHMM(r["診療開始時間"]);
     const e = toHHMM(r["診療終了時間"]);
-    if (!id || !d || !s || !e) continue;  
-    (map.get(id) ?? map.set(id, {月:[],火:[],水:[],木:[],金:[],土:[],日:[],祝:[]}).get(id)![d]).push([s,e]);
+    if (!id || !d || !s || !e) continue;         // ここで d は Day に絞られる
+
+    if (!map.has(id)) {
+      const init: Record<Day, Array<[string,string]>> = {
+        月: [], 火: [], 水: [], 木: [], 金: [], 土: [], 日: [], 祝: []
+      };
+      map.set(id, init);
+    }
+    map.get(id)![d].push([s, e]);                // ここは Record<Day, ...> 確定
   }
 
-  // 施設×曜日で最速開始 / 最遅終了を採用
+  // 施設×曜日で最速開始 / 最遅終了を採用（ここは現状のままでOK）
   const out = new Map<string, Record<string,string>>();
   for (const [id, days] of map) {
     const rec: Record<string,string> = {};
