@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "prebuild": "node scripts/build-medical.mjs && node scripts/build-care-json.mjs && node scripts/build-maternity-json.mjs",
     "build": "next build --turbopack",
+    "dev": "next dev --turbopack",
     "start": "next start"
   },
+  "engines": { "node": ">=18" },
   "dependencies": {
     "globby": "^14.1.0",
     "iconv-lite": "^0.7.0",
