@@ -179,7 +179,39 @@ const readClosed = (r: any) => {
 };
 
 // ───── 薬局（曜日×時間帯）専用：日別レンジを集計 ─────
-const DAY_KEYS = ["月","火","水","木","金","土","日","祝"] as const;
+type Day = "月"|"火"|"水"|"木"|"金"|"土"|"日"|"祝";
+
+function pivotHours(hoursRows: any[]) {
+  const map = new Map<string, Record<Day, Array<[string,string]>>>();
+  for (const r of hoursRows) {
+    const id = String(r["医療機関コード"]);
+    const d: Day = normalizeDay(r["曜日"]);           // "月"〜"祝" に揃える
+    const s = toHHMM(r["診療開始時間"]);              // "09:00" 形式
+    const e = toHHMM(r["診療終了時間"]);
+    if (!id || !d || !s || !e) continue;
+    (map.get(id) ?? map.set(id, {月:[],火:[],水:[],木:[],金:[],土:[],日:[],祝:[]}).get(id)![d]).push([s,e]);
+  }
+
+  // 施設×曜日で最速開始 / 最遅終了を採用
+  const out = new Map<string, Record<string,string>>();
+  for (const [id, days] of map) {
+    const rec: Record<string,string> = {};
+    (["月","火","水","木","金","土","日","祝"] as Day[]).forEach(d => {
+      if (!days[d].length) return;
+      const starts = days[d].map(([s]) => s).sort();
+      const ends   = days[d].map(([,e]) => e).sort();
+      rec[`${d}_診療開始時間`] = starts[0];
+      rec[`${d}_診療終了時間`] = ends[ends.length-1];
+    });
+    out.set(id, rec);
+  }
+  return out;
+}
+
+function joinFacilityAndHours(facRows: any[], hours: Map<string,Record<string,string>>) {
+  return facRows.map(r => ({ ...r, ...(hours.get(String(r["医療機関コード"])) ?? {}) }));
+}
+
 type DayKey = typeof DAY_KEYS[number];
 
 // ── 薬局: 「月_開店時間帯#_開始/終了時間」→ 日別レンジ配列
