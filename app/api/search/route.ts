@@ -224,10 +224,10 @@ function pivotHours(hoursRows: any[]) {
   const map = new Map<string, Record<Day, Array<[string,string]>>>();
   for (const r of hoursRows) {
     const id = String(r["医療機関コード"]);
-    const d: Day = normalizeDay(r["曜日"]);           // "月"〜"祝" に揃える
-    const s = toHHMM(r["診療開始時間"]);              // "09:00" 形式
+    const d = normalizeDay(r["曜日"]); 
+    const s = toHHMM(r["診療開始時間"]);
     const e = toHHMM(r["診療終了時間"]);
-    if (!id || !d || !s || !e) continue;
+    if (!id || !d || !s || !e) continue;  
     (map.get(id) ?? map.set(id, {月:[],火:[],水:[],木:[],金:[],土:[],日:[],祝:[]}).get(id)![d]).push([s,e]);
   }
 
