@@ -94,11 +94,16 @@ const composeFromPairs = (r: any) => {
 
 // 文中から時間帯（9:00〜18:00 等）を1つ拾う最終手段
 const scanForRange = (r: any) => {
+  const re =
+    /([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-–—]\s*(翌|翌日)?\s*([01]?\d|2[0-3])(?::([0-5]\d))?/;
   for (const v of Object.values(r)) {
-    if (v == null) continue;
-    const s = toAscii(String(v));     // ★ 数値でも文字列化して判定
-    const hit = s.match(/0\d{9,10}/);
-    if (hit) return hit[0];
+    if (typeof v !== "string") continue;
+    const s = toAscii(v);
+    const m = s.match(re);
+    if (m) {
+      // ハイフン系は見た目を「〜」に統一
+      return m[0].replace(/[-–—]/, "〜");
+    }
   }
   return "";
 };
@@ -163,6 +168,11 @@ const readClosed = (r: any) => {
   // 既存の“定休日/休業日/休診日”文字列も最後に評価
   const text = pickStr(r, ["休診日","定休日","休業日","休館日","休み"]);
   if (text) return text; // 文字列で明示されている場合はそのまま
+
+  //「営業日（X）」が 0/空 なら休み扱い
+  const openKeys = [`営業日（${d}）`, `営業日(${d})`];
+  const ok = openKeys.find(k => r?.[k] != null);
+  if (ok && !valIsOne(r[ok])) closedDays.push(d);
 
   return closedDays.length ? closedDays.join("・") : "";
 };
@@ -230,32 +240,30 @@ const readMemo = (r: any) =>
     "夜間","時間外","夜間対応","救急","救急告示","二次救急","三次救急",
   ].map(k => String(r?.[k] ?? "")).join(" ");
 
+// 電話抽出の共通関数（全角/国番号/ハイフン対応）
+const extractTel = (text: string): string => {
+  let d = toAscii(text).replace(/[^\d+]/g, ""); // 数字と+以外を除去
+  if (d.startsWith("+81")) d = "0" + d.slice(3);
+  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
+  const only = d.replace(/[^\d]/g, "");
+  return (only.length === 10 || only.length === 11) ? only : "";
+};
+
 // 電話番号（複数・国番号対応：最初の1番号だけ抽出）
 const readTel = (r: any) => {
   const raw = pickStr(r, [
     "tel","TEL","Tel","電話","電話番号","代表電話","連絡先","連絡先電話番号",
-    "phone","Phone"
+    "phone","Phone","TEL1","TEL２","TEL_1","TEL_2","電話番号１","電話番号2"
   ]);
-  let t = toAscii(raw || "");
-
-  // 1) 文中に 0 から始まる 10〜11桁があれば優先
-  const m = t.match(/0\d{9,10}/);
-  if (m) return m[0];
-
-  // 2) +81 → 0 変換して桁数チェック
-  let d = t.replace(/[^\d+]/g, "");
-  if (d.startsWith("+81")) d = "0" + d.slice(3);
-  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
-
-  const only = d.replace(/[^\d]/g, "");
-  if (only.length === 10 || only.length === 11) return only;
-
-  // 3) いずれも無ければ、全フィールドをざっと走査して拾う
+  if (raw) {
+    const hit = extractTel(raw);
+    if (hit) return hit;
+  }
+  // どのキーにも無ければ全フィールドをざっと走査
   for (const v of Object.values(r)) {
     if (v == null) continue;
-    const s = toAscii(String(v));
-    const hit = s.match(/0\d{9,10}/);
-    if (hit) return hit[0];
+    const hit = extractTel(String(v));
+    if (hit) return hit;
   }
   return "";
 };
