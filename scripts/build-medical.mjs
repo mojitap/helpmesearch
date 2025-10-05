@@ -138,6 +138,26 @@ const buildHoursMap = (rows) => {
   return map;
 };
 
+// -2 CSV から id -> tel を作る（FAX列は無視し、無ければ全列スキャン）
+const buildTelMap = (rows) => {
+  const m = new Map();
+  for (const r of rows) {
+    const id = String(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
+    if (!id) continue;
+    const telRaw = firstKey(r, ["案内用電話番号","連絡先電話番号","電話番号","TEL","Tel","tel"]) || "";
+    let tel = extractTel(telRaw);
+    if (!tel) {
+      for (const [k,v] of Object.entries(r)) {
+        if (/fax|ＦＡＸ/i.test(k)) continue;
+        tel = extractTel(v);
+        if (tel) break;
+      }
+    }
+    if (tel && !m.has(id)) m.set(id, tel);
+  }
+  return m;
+};
+
 // ============ 共通 正規化（★tel/url を強化） ============
 
 const normalizeCommon = (row) => {
@@ -146,19 +166,26 @@ const normalizeCommon = (row) => {
   const address = firstKey(row, ["所在地","住所","所在地住所","所在地（住所）","address"]);
   const { pref, city } = pickPrefCity(row);
 
-  // tel：優先キー → だめなら全フィールド走査
+  // ★ 厚労省の医科CSVは「案内用電話番号」名が本命
   const telKeyRaw =
-    firstKey(row, ["電話番号","電話","TEL","Tel","tel","代表電話","連絡先電話番号","電話番号（代表）」"]) || "";
+    firstKey(row, ["案内用電話番号","電話番号","電話","TEL","Tel","tel","代表電話","連絡先電話番号"]) || "";
   let tel = extractTel(telKeyRaw);
   if (!tel) {
-    for (const v of Object.values(row)) {
+    // FAX系の列は除外して全列スキャン
+    for (const [k, v] of Object.entries(row)) {
+      if (/fax|ＦＡＸ/i.test(k)) continue;
       tel = extractTel(v);
       if (tel) break;
     }
   }
 
   // url：よくあるキー → だめなら簡易スキャン
-  let url = normalizeUrl(firstKey(row, ["URL","Url","url","ホームページ","ホームページURL"]));
+  // ★ URL も「案内用ホームページアドレス」を優先、薬局CSVは「薬局のホームページアドレス」
+  let url = normalizeUrl(firstKey(row, [
+    "案内用ホームページアドレス","薬局のホームページアドレス",
+    "URL","Url","url","ホームページ","ホームページURL"
+  ]));
+  
   if (!url) {
     const strs = Object.values(row).filter(x => typeof x === "string");
     for (const s of strs) {
@@ -223,16 +250,17 @@ const buildHospital = () => {
   const info = readCSV(fInfo);
 
   const fHours = detectLatest("01-2_hospital_speciality_hours_");
-  const hoursMap = fHours ? buildHoursMap(readCSV(fHours)) : new Map();
-
-  const fDept = detectLatest("01-2_hospital_speciality_hours_");
-  const deptMap = fDept ? buildDeptMap(readCSV(fDept)) : new Map();
+  const hoursRows = fHours ? readCSV(fHours) : [];
+  const hoursMap = fHours ? buildHoursMap(hoursRows) : new Map();
+  const deptMap  = fHours ? buildDeptMap(hoursRows)  : new Map();
+  const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
     const base = normalizeCommon(r);
     const extra = hoursMap.get(String(base.id)) || {};
     const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"hospital", departments: depts };
+    return { ...base, ...extra, kind:"hospital", departments: depts,
+             tel: base.tel || telMap.get(String(base.id)) || "" };
   });
   writeByPref("hospital", items);
 };
@@ -243,16 +271,17 @@ const buildClinic = () => {
   const info = readCSV(fInfo);
 
   const fHours = detectLatest("02-2_clinic_speciality_hours_");
-  const hoursMap = fHours ? buildHoursMap(readCSV(fHours)) : new Map();
-
-  const fDept = detectLatest("02-2_clinic_speciality_hours_");
-  const deptMap = fDept ? buildDeptMap(readCSV(fDept)) : new Map();
+  const hoursRows = fHours ? readCSV(fHours) : [];
+  const hoursMap = fHours ? buildHoursMap(hoursRows) : new Map();
+  const deptMap  = fHours ? buildDeptMap(hoursRows)  : new Map();
+  const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
     const base = normalizeCommon(r);
     const extra = hoursMap.get(String(base.id)) || {};
     const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"clinic", departments: depts };
+    return { ...base, ...extra, kind:"clinic", departments: depts,
+             tel: base.tel || telMap.get(String(base.id)) || "" };
   });
   writeByPref("clinic", items);
 };
@@ -264,16 +293,17 @@ const buildDental = () => {
 
   // 03-2 が 2025-06-01 に無ければ detectLatest が自動で 2024-12-01 を拾います
   const fHours = detectLatest("03-2_dental_speciality_hours_");
-  const hoursMap = fHours ? buildHoursMap(readCSV(fHours)) : new Map();
-
-  const fDept = detectLatest("03-2_dental_speciality_hours_");
-  const deptMap = fDept ? buildDeptMap(readCSV(fDept)) : new Map();
+  const hoursRows = fHours ? readCSV(fHours) : [];
+  const hoursMap = fHours ? buildHoursMap(hoursRows) : new Map();
+  const deptMap  = fHours ? buildDeptMap(hoursRows)  : new Map();
+  const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
     const base = normalizeCommon(r);
     const extra = hoursMap.get(String(base.id)) || {};
     const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"dental", departments: depts };
+    return { ...base, ...extra, kind:"dental", departments: depts,
+             tel: base.tel || telMap.get(String(base.id)) || "" };
   });
   writeByPref("dental", items);
 };
