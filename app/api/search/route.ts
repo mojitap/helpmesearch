@@ -178,8 +178,47 @@ const readClosed = (r: any) => {
   return closedDays.length ? closedDays.join("・") : "";
 };
 
-// ───── 薬局（曜日×時間帯）専用：日別レンジを集計 ─────
-type Day = "月"|"火"|"水"|"木"|"金"|"土"|"日"|"祝";
+// ---- ETLヘルパー（pivotHours用）----
+type Day = "月" | "火" | "水" | "木" | "金" | "土" | "日" | "祝";
+
+function normalizeDay(input: any): Day | "" {
+  const s = String(input ?? "").trim();
+  if (!s) return "";
+  // 日本語1文字を優先して拾う
+  const m = s.match(/[月火水木金土日祝]/);
+  if (m) return m[0] as Day;
+  // 英語表記の簡易対応
+  const t = s.toLowerCase();
+  if (t.startsWith("mon")) return "月";
+  if (t.startsWith("tue")) return "火";
+  if (t.startsWith("wed")) return "水";
+  if (t.startsWith("thu")) return "木";
+  if (t.startsWith("fri")) return "金";
+  if (t.startsWith("sat")) return "土";
+  if (t.startsWith("sun")) return "日";
+  if (t.includes("holiday")) return "祝";
+  return "";
+}
+
+// "9:00" / "9時30分" / "0930" / "9" → "HH:MM"
+function toHHMM(val: any): string {
+  const s0 = toAscii(String(val ?? ""))
+    .replace(/時/g, ":")
+    .replace(/分/g, "")
+    .trim();
+
+  // 0930 / 930 → 09:30
+  if (/^\d{3,4}$/.test(s0)) {
+    const d = s0.padStart(4, "0");
+    return `${d.slice(0, 2)}:${d.slice(2)}`;
+  }
+
+  const m = s0.match(/^([0-2]?\d)(?::?([0-5]\d))?$/);
+  if (!m) return "";
+  const h = Math.min(23, parseInt(m[1], 10));
+  const mm = m[2] ? parseInt(m[2], 10) : 0;
+  return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
 
 function pivotHours(hoursRows: any[]) {
   const map = new Map<string, Record<Day, Array<[string,string]>>>();
@@ -211,6 +250,8 @@ function pivotHours(hoursRows: any[]) {
 function joinFacilityAndHours(facRows: any[], hours: Map<string,Record<string,string>>) {
   return facRows.map(r => ({ ...r, ...(hours.get(String(r["医療機関コード"])) ?? {}) }));
 }
+
+const DAY_KEYS = ["月","火","水","木","金","土","日","祝"] as const;
 
 type DayKey = typeof DAY_KEYS[number];
 
