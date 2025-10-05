@@ -54,6 +54,7 @@ const toAscii = (s: string) =>
     .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
     .replace(/[：－―ー〜～]/g, m => (m === "：" ? ":" : "～"));
 
+// 共通: 最初に見つかった空でない文字列を返す
 const pickStr = (obj: any, keys: string[]) => {
   for (const k of keys) {
     const v = obj?.[k];
@@ -62,7 +63,7 @@ const pickStr = (obj: any, keys: string[]) => {
   return "";
 };
 
-// 個別キーを並べて1行にまとめる（平日/土/日 があれば "平日:… / 土:… / 日:…" に）
+// 曜日別を合体して 例) "平日:9:00-18:00 / 土:9:00-12:00"
 const combineDaily = (r: any, plan: Array<[string, string]>) => {
   const parts: string[] = [];
   for (const [key, label] of plan) {
@@ -72,21 +73,26 @@ const combineDaily = (r: any, plan: Array<[string, string]>) => {
   return parts.join(" / ");
 };
 
-// 医療 + 介護の代表的なキーを拾う
+// ★医療＋介護＋薬局の揺れを網羅
 const readHours = (r: any) =>
-  // まずは1フィールドで完結している候補を優先
+  // 1フィールド完結の候補を優先
   pickStr(r, [
     // 医療系
     "診療時間_平日", "診療時間", "外来診療時間", "外来受付時間",
     // 介護系
-    "サービス提供時間", "営業時間",
+    "サービス提供時間", "営業日時", "営業時間",
+    // 薬局系
+    "開局時間", "開局時間_平日",
     // 共通/英語
-    "hours", "opening_hours", "business_hours", "営業時間_平日", "営業時間（平日）",
+    "hours", "opening_hours", "business_hours",
+    // その他の表記ゆれ
+    "営業時間（平日）", "営業時間_平日",
   ]) ||
-  // だめなら曜日別を合体
+  // 曜日別の合体
   combineDaily(r, [
     ["サービス提供時間_平日","平日"], ["サービス提供時間_土曜","土"], ["サービス提供時間_日曜","日"],
     ["診療時間_平日","平日"], ["診療時間_土曜","土"], ["診療時間_日曜","日"],
+    ["開局時間_平日","平日"], ["開局時間_土曜","土"], ["開局時間_日曜","日"],
     ["営業時間_平日","平日"], ["営業時間_土曜","土"], ["営業時間_日曜","日"],
   ]);
 
@@ -96,29 +102,69 @@ const readClosed = (r: any) =>
 const readMemo = (r: any) =>
   [
     "備考","注記","特記事項",
-    // care系の補足も拾う
     "営業日時備考","サービス提供時間備考","連絡事項",
-    // 夜間/救急などのフラグ
     "夜間","時間外","夜間対応","救急","救急告示","二次救急","三次救急",
   ].map(k => String(r?.[k] ?? "")).join(" ");
 
 // 電話番号（複数・国番号対応：最初の1番号だけ抽出）
 const readTel = (r: any) => {
   const raw = pickStr(r, [
-    "tel","TEL","Tel","電話","電話番号","代表電話","phone","Phone"
+    "tel","TEL","Tel","電話","電話番号","代表電話","連絡先","連絡先電話番号",
+    "phone","Phone"
   ]);
-  if (!raw) return "";
-  const s = toAscii(raw);
-  // +81 / 0 / 0120 の形式っぽい最初の1件だけ拾う
-  const m = s.match(
-    /(\+81[-\s]?\d{1,4}[-\s]?\d{2,4}[-\s]?\d{3,4}|0\d{1,4}[-\s]?\d{2,4}[-\s]?\d{3,4}|0120[-\s]?\d{3}[-\s]?\d{3})/
-  );
-  if (!m) return "";
-  let d = m[1].replace(/[^\d+]/g, "");
-  // 国番号 → 国内表記
+  let t = toAscii(raw || "");
+
+  // 1) 文中に 0 から始まる 10〜11桁があれば優先
+  const m = t.match(/0\d{9,10}/);
+  if (m) return m[0];
+
+  // 2) +81 → 0 変換して桁数チェック
+  let d = t.replace(/[^\d+]/g, "");
   if (d.startsWith("+81")) d = "0" + d.slice(3);
-  // 10 or 11 桁のみ採用
-  return (d.length === 10 || d.length === 11) ? d : "";
+  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
+
+  const only = d.replace(/[^\d]/g, "");
+  if (only.length === 10 || only.length === 11) return only;
+
+  // 3) いずれも無ければ、全フィールドをざっと走査して拾う
+  for (const v of Object.values(r)) {
+    if (typeof v !== "string") continue;
+    const s = toAscii(v);
+    const hit = s.match(/0\d{9,10}/);
+    if (hit) return hit[0];
+  }
+  return "";
+};
+
+const normalizeUrl = (u: string) => {
+  let s = String(u || "").trim()
+    .replace(/：/g, ":").replace(/／/g, "/");
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s) && /^[\w.-]+\.[a-z]{2,}(?:\/|$)/i.test(s)) {
+    s = "https://" + s;
+  }
+  return s;
+};
+
+const readUrl = (r: any) => {
+  const raw = pickStr(r, [
+    "url","URL","Url",
+    "website","Website","web","Web",
+    "ホームページ","ＨＰ","HP","ホームページURL",
+    "公式サイト","公式Web","リンク","外部リンク"
+  ]);
+  if (raw) return normalizeUrl(raw);
+
+  // 文中から http(s) またはドメインらしきものを拾う
+  for (const v of Object.values(r)) {
+    if (typeof v !== "string") continue;
+    const s = v as string;
+    const m1 = s.match(/https?:\/\/[^\s"'<>]+/i);
+    if (m1) return normalizeUrl(m1[0]);
+    const m2 = s.match(/\b[\w.-]+\.(?:jp|co\.jp|go\.jp|com|net|org|clinic|hospital)\b/i);
+    if (m2) return "https://" + m2[0];
+  }
+  return "";
 };
 
 // ── 夜間/救急ラベル作成 ──
@@ -172,10 +218,11 @@ const emergencyRange = (text: string) => {
 
 // 施設1件から hours / nightLabel / closed / tel を生成
 const decorate = (r: any) => {
-  let hours = readHours(r);
+  const hours = readHours(r);
   const closed = readClosed(r);
   const tel = readTel(r);
   const memo = readMemo(r);
+  const url = readUrl(r);
   const bag = `${hours} ${memo}`;
 
   let nightLabel = "";
@@ -185,7 +232,7 @@ const decorate = (r: any) => {
   if (!nightLabel && NIGHT_RE.test(bag)) {
     nightLabel = nightTail(bag) || "対応あり";
   }
-  return { hours, nightLabel, closed, tel };
+  return { hours, nightLabel, closed, tel, url };
 };
 
 const CARE_KINDS = new Set([
@@ -278,7 +325,7 @@ export async function GET(req: Request) {
       const arr = (await r.json()) as any[];
       rows.push(
         ...arr.map((raw) => {
-          const extra = decorate(raw);
+          const extra = decorate(raw);             // hours/night/closed/tel/url
           return { ...raw, ...extra, kind: k };
         })
       );
