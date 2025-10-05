@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prebuild": "node scripts/build-medical.mjs && node scripts/build-care-json.mjs && node scripts/build-maternity-json.mjs",
-    "build": "next build --turbopack",
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
+    "prebuild": "node scripts/build-medical.mjs && node scripts/build-care-json.mjs",
+    "build": "next build",
     "start": "next start"
   },
   "engines": { "node": ">=18" },
