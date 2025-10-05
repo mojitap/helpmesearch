@@ -94,16 +94,13 @@ const composeFromPairs = (r: any) => {
 
 // 文中から時間帯（9:00〜18:00 等）を1つ拾う最終手段
 const scanForRange = (r: any) => {
-  const re =
-    /([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-–—]\s*(翌|翌日)?\s*([01]?\d|2[0-3])(?::([0-5]\d))?/;
   for (const v of Object.values(r)) {
     if (typeof v !== "string") continue;
     const s = toAscii(v);
-    const m = s.match(re);
-    if (m) {
-      // ハイフン系は見た目を「〜」に統一
-      return m[0].replace(/[-–—]/, "〜");
-    }
+    const m = s.match(
+      /([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-]\s*([01]?\d|2[0-3])(?::([0-5]\d))?/
+    );
+    if (m) return m[0].replace(/-/, "〜");
   }
   return "";
 };
@@ -147,32 +144,38 @@ const valIsOne = (v: any) => {
 
 const readClosed = (r: any) => {
   const closedDays: string[] = [];
+  const days = ["月","火","水","木","金","土","日"] as const;
 
-  // 病院/クリニック/歯科: 「毎週決まった曜日に休診（X）」に対応
-  (["月","火","水","木","金","土","日"] as DayKey[]).forEach(d => {
-    const keys = [
+  for (const d of days) {
+    // 病院/クリニック/歯科/施設系：毎週休み系のカラム
+    const weeklyKeys = [
       `毎週決まった曜日に休診（${d}）`, `毎週決まった曜日に休診(${d})`,
       `定期休診毎週（${d}）`,           `定期休診毎週(${d})`,
       `定期休業毎週（${d}）`,           `定期休業毎週(${d})`,
-      `定期閉店毎週（${d}）`,           `定期閉店毎週(${d})`, // 薬局CSV互換
+      `定期閉店毎週（${d}）`,           `定期閉店毎週(${d})`, // 薬局CSV
     ];
-    const hit = keys.find(k => r?.[k] != null && String(r[k]).trim() !== "");
-    if (hit && valIsOne(r[hit])) closedDays.push(d);
-  });
+    const wk = weeklyKeys.find(k => r?.[k] != null && String(r[k]).trim() !== "");
+    if (wk && valIsOne(r[wk])) closedDays.push(d);
 
-  // 祝日（病院/クリニック/歯科:「祝日に休診」 / 薬局:「祝日」）
+    // 薬局CSV：「営業日（X）」が 0/空 なら休み扱い
+    const openKeys = [`営業日（${d}）`, `営業日(${d})`];
+    const ok = openKeys.find(k => r?.[k] != null);
+    if (ok) {
+      const v = String(r[ok]).trim();
+      if (v && v !== "1" && !/^true$/i.test(v) && v !== "○" && v !== "◯") {
+        closedDays.push(d);
+      }
+    }
+  }
+
+  // 祝日に休み（病院/クリニックは「祝日に休診」、薬局は「祝日」）
   const holidayKeys = ["祝日に休診","祝日","祝日に休業","祝日に閉店"];
   const hKey = holidayKeys.find(k => r?.[k] != null);
   if (hKey && valIsOne(r[hKey])) closedDays.push("祝");
 
-  // 既存の“定休日/休業日/休診日”文字列も最後に評価
-  const text = pickStr(r, ["休診日","定休日","休業日","休館日","休み"]);
-  if (text) return text; // 文字列で明示されている場合はそのまま
-
-  //「営業日（X）」が 0/空 なら休み扱い
-  const openKeys = [`営業日（${d}）`, `営業日(${d})`];
-  const ok = openKeys.find(k => r?.[k] != null);
-  if (ok && !valIsOne(r[ok])) closedDays.push(d);
+  // 文字列で明示されている場合はそれを優先
+  const text = pickStr(r, ["休診日","定休日","休業日","休館日","休み","店休日","店休"]);
+  if (text) return text;
 
   return closedDays.length ? closedDays.join("・") : "";
 };
