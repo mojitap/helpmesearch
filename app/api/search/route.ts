@@ -73,31 +73,66 @@ const combineDaily = (r: any, plan: Array<[string, string]>) => {
   return parts.join(" / ");
 };
 
-// ★医療＋介護＋薬局の揺れを網羅
+// 開始/終了のペアから合成する簡易関数
+const composeFromPairs = (r: any) => {
+  const pairs: Array<[string, string]> = [
+    ["営業時間（開始）","営業時間（終了）"],
+    ["営業時間開始","営業時間終了"],
+    ["営業開始時間","営業終了時間"],
+    ["開始時間","終了時間"],
+    ["サービス提供開始時間","サービス提供終了時間"],
+    ["提供開始時間","提供終了時間"],
+    ["開局時間（開始）","開局時間（終了）"],
+    ["受付開始","受付終了"], ["受付開始時間","受付終了時間"],
+  ];
+  for (const [a, b] of pairs) {
+    const A = r?.[a], B = r?.[b];
+    if (A && B) return `${A}〜${B}`;
+  }
+  return "";
+};
+
+// 文中から時間帯（9:00〜18:00 等）を1つ拾う最終手段
+const scanForRange = (r: any) => {
+  for (const v of Object.values(r)) {
+    if (typeof v !== "string") continue;
+    const s = toAscii(v);
+    const m = s.match(/([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-]\s*([01]?\d|2[0-3])(?::([0-5]\d))?/);
+    if (m) return m[0].replace(/-/,"〜");
+  }
+  return "";
+};
+
+// ★医療＋介護＋薬局の揺れを広めに
 const readHours = (r: any) =>
-  // 1フィールド完結の候補を優先
   pickStr(r, [
-    // 医療系
+    // 医療
     "診療時間_平日", "診療時間", "外来診療時間", "外来受付時間",
-    // 介護系
-    "サービス提供時間", "営業日時", "営業時間",
-    // 薬局系
+    "診療受付時間", "通常営業時間",
+    // 介護
+    "サービス提供時間", "営業日時", "営業時間", "利用時間", "提供時間",
+    // 薬局
     "開局時間", "開局時間_平日",
-    // 共通/英語
+    "開局時間（平日）","開局時間(平日)","開局時間（月〜金）","開局時間(月〜金)",
+    // 英語・その他
     "hours", "opening_hours", "business_hours",
-    // その他の表記ゆれ
-    "営業時間（平日）", "営業時間_平日",
+    "営業時間_平日","営業時間（平日）","営業時間(平日)","営業時間 平日",
+    "営業時間（月〜金）","営業時間(月〜金)","受付時間"
   ]) ||
-  // 曜日別の合体
   combineDaily(r, [
     ["サービス提供時間_平日","平日"], ["サービス提供時間_土曜","土"], ["サービス提供時間_日曜","日"],
     ["診療時間_平日","平日"], ["診療時間_土曜","土"], ["診療時間_日曜","日"],
     ["開局時間_平日","平日"], ["開局時間_土曜","土"], ["開局時間_日曜","日"],
     ["営業時間_平日","平日"], ["営業時間_土曜","土"], ["営業時間_日曜","日"],
-  ]);
+    ["提供時間_平日","平日"], ["提供時間_土曜","土"], ["提供時間_日曜","日"],
+  ]) ||
+  composeFromPairs(r) ||
+  scanForRange(r);
 
 const readClosed = (r: any) =>
-  pickStr(r, ["休診日", "定休日", "休業日", "休館日", "休み"]);
+  pickStr(r, [
+    "休診日","定休日","休業日","休館日","店休日","休日","休み","店休"
+  ]);
 
 const readMemo = (r: any) =>
   [
@@ -128,8 +163,8 @@ const readTel = (r: any) => {
 
   // 3) いずれも無ければ、全フィールドをざっと走査して拾う
   for (const v of Object.values(r)) {
-    if (typeof v !== "string") continue;
-    const s = toAscii(v);
+    if (v == null) continue;
+    const s = toAscii(String(v));         // ← 数値も文字列化してから判定
     const hit = s.match(/0\d{9,10}/);
     if (hit) return hit[0];
   }
@@ -138,31 +173,62 @@ const readTel = (r: any) => {
 
 const normalizeUrl = (u: string) => {
   let s = String(u || "").trim()
-    .replace(/：/g, ":").replace(/／/g, "/");
+    // 全角記号や全角英数を半角へ
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/：/g, ":").replace(/／/g, "/").replace(/　/g, " ");
   if (!s) return "";
+  // プロトコル省略を補う（例: example.com → https://example.com）
   if (!/^https?:\/\//i.test(s) && /^[\w.-]+\.[a-z]{2,}(?:\/|$)/i.test(s)) {
     s = "https://" + s;
   }
+  // 末尾の句読点・括弧などを落とす
+  s = s.replace(/[)\]＞＞。、．，）】」』]+$/g, "");
   return s;
 };
 
 const readUrl = (r: any) => {
-  const raw = pickStr(r, [
+  // まずはよくあるキー名を広く見る
+  const FIRST_KEYS = [
     "url","URL","Url",
     "website","Website","web","Web",
-    "ホームページ","ＨＰ","HP","ホームページURL",
-    "公式サイト","公式Web","リンク","外部リンク"
-  ]);
-  if (raw) return normalizeUrl(raw);
+    "homepage","HomePage","home_page",
+    "リンク","外部リンク","サイト","サイトURL",
+    "ホームページ","ホームページURL","ホームページアドレス","公式サイト","公式サイトURL","公式Web","公式HP","公式ホームページ",
+    "ＨＰ","HP","HPアドレス","店舗HP","店舗URL","企業HP","企業URL","病院HP","薬局HP","施設HP","園HP",
+  ];
+  for (const k of FIRST_KEYS) {
+    const v = r?.[k];
+    if (v && String(v).trim()) {
+      return normalizeUrl(String(v));
+    }
+  }
 
-  // 文中から http(s) またはドメインらしきものを拾う
-  for (const v of Object.values(r)) {
-    if (typeof v !== "string") continue;
-    const s = v as string;
-    const m1 = s.match(/https?:\/\/[^\s"'<>]+/i);
-    if (m1) return normalizeUrl(m1[0]);
-    const m2 = s.match(/\b[\w.-]+\.(?:jp|co\.jp|go\.jp|com|net|org|clinic|hospital)\b/i);
-    if (m2) return "https://" + m2[0];
+  // 文字列を再帰的に全部集める（配列・ネスト対策）
+  const strings: string[] = [];
+  const visit = (x: any, depth = 0) => {
+    if (depth > 3 || x == null) return;
+    if (typeof x === "string") {
+      strings.push(x);
+    } else if (Array.isArray(x)) {
+      for (const it of x) visit(it, depth + 1);
+    } else if (typeof x === "object") {
+      for (const v of Object.values(x)) visit(v, depth + 1);
+    }
+  };
+  visit(r);
+
+  // 1) http(s):// を直接拾う
+  for (const s0 of strings) {
+    const s = s0.replace(/\s+/g, " ");
+    const m = s.match(/https?:\/\/[^\s"'<>）)】】、。]+/i);
+    if (m) return normalizeUrl(m[0]);
+  }
+  // 2) ドメインっぽい文字列も拾う（TLD を拡張）
+  const domainRe = /\b[\w.-]+\.(?:jp|co\.jp|or\.jp|ne\.jp|go\.jp|ac\.jp|lg\.jp|com|net|org|info|biz|clinic|hospital|pharmacy|co|io)\b/i;
+  for (const s0 of strings) {
+    const s = s0.replace(/\s+/g, " ");
+    const m = s.match(domainRe);
+    if (m) return normalizeUrl(m[0]);
   }
   return "";
 };
