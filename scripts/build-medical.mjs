@@ -9,6 +9,21 @@ const OUT = path.join(ROOT, "public", "data", "medical");
 
 const PREFS = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
 
+// 先頭ゼロ差/記号混在のIDを正規化
+const normId = (v="") => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
+
+// 電話・URLキーの揺れ対策
+const TEL_KEYS = [
+  "電話番号","電話","TEL","Tel","tel",
+  "代表電話","連絡先電話番号",
+  "電話番号(代表)","電話番号（代表）"
+];
+const URL_KEYS = [
+  "URL","Url","url",
+  "ホームページ","ホームページURL","ホームページアドレス",
+  "案内用ホームページアドレス","薬局のホームページアドレス"
+];
+
 // ============ util ============
 
 const firstKey = (row, names) => {
@@ -122,10 +137,13 @@ const toHHMM = (v) => {
 const buildHoursMap = (rows) => {
   const map = new Map(); // id -> { 月_診療開始時間, ... }
   for (const r of rows) {
-    const id = String(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
-    const d  = normDay(firstKey(r, ["曜日"]));
-    const s  = toHHMM(firstKey(r, ["診療開始時間","外来受付開始時間"]));
-    const e  = toHHMM(firstKey(r, ["診療終了時間","外来受付終了時間"]));
+    const id = normId(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
+    const dKey = pickDayKey(r);
+    const sKey = pickStartKey(r);
+    const eKey = pickEndKey(r);
+    const d  = normDay(dKey ? r[dKey] : "");
+    const s  = toHHMM(sKey ? r[sKey] : "");
+    const e  = toHHMM(eKey ? r[eKey] : "");
     if (!id || !d || !s || !e) continue;
     if (!map.has(id)) map.set(id, {});
     const rec = map.get(id);
@@ -142,7 +160,7 @@ const buildHoursMap = (rows) => {
 const buildTelMap = (rows) => {
   const m = new Map();
   for (const r of rows) {
-    const id = String(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
+    const id = normId(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
     if (!id) continue;
     const telRaw = firstKey(r, ["案内用電話番号","連絡先電話番号","電話番号","TEL","Tel","tel"]) || "";
     let tel = extractTel(telRaw);
@@ -161,34 +179,27 @@ const buildTelMap = (rows) => {
 // ============ 共通 正規化（★tel/url を強化） ============
 
 const normalizeCommon = (row) => {
-  const id = firstKey(row, ["医療機関コード","施設ID","機関ID","id","ID"]) || "";
+  const id = normId(firstKey(row, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
   const name = firstKey(row, ["医療機関名称","機関名称","名称","name"]);
   const address = firstKey(row, ["所在地","住所","所在地住所","所在地（住所）","address"]);
   const { pref, city } = pickPrefCity(row);
 
-  // ★ 厚労省の医科CSVは「案内用電話番号」名が本命
-  const telKeyRaw =
-    firstKey(row, ["案内用電話番号","電話番号","電話","TEL","Tel","tel","代表電話","連絡先電話番号"]) || "";
-  let tel = extractTel(telKeyRaw);
+  // tel：ヘッダ名をゆるく判定 → だめなら全フィールド走査（FAX除外）
+  const telKey = pickTelKey(row);
+  let tel = extractTel(telKey ? row[telKey] : "");
   if (!tel) {
-    // FAX系の列は除外して全列スキャン
-    for (const [k, v] of Object.entries(row)) {
-      if (/fax|ＦＡＸ/i.test(k)) continue;
+    for (const [k,v] of Object.entries(row)) {
+      if (/fax|ＦＡＸ/i.test(String(k))) continue; // FAXは除外
       tel = extractTel(v);
       if (tel) break;
     }
   }
 
-  // url：よくあるキー → だめなら簡易スキャン
-  // ★ URL も「案内用ホームページアドレス」を優先、薬局CSVは「薬局のホームページアドレス」
-  let url = normalizeUrl(firstKey(row, [
-    "案内用ホームページアドレス","薬局のホームページアドレス",
-    "URL","Url","url","ホームページ","ホームページURL"
-  ]));
-  
+  // url：ヘッダ名をゆるく判定 → だめなら簡易スキャン
+  const urlKey = pickUrlKey(row);
+  let url = normalizeUrl(urlKey ? row[urlKey] : "");
   if (!url) {
-    const strs = Object.values(row).filter(x => typeof x === "string");
-    for (const s of strs) {
+    for (const [,s] of Object.entries(row)) {
       const m1 = String(s).match(/https?:\/\/[^\s"'<>）)】】、。]+/i);
       if (m1) { url = normalizeUrl(m1[0]); break; }
       const m2 = String(s).match(/\b[\w.-]+\.(?:jp|co\.jp|or\.jp|ne\.jp|go\.jp|ac\.jp|lg\.jp|com|net|org|info|biz|clinic|hospital|pharmacy|co|io)\b/i);
@@ -207,12 +218,74 @@ const normalizeCommon = (row) => {
   };
 };
 
+// ===== ヘッダ名のゆるい比較ヘルパ =====
+const hnorm = (s="") =>
+  toAscii(String(s))
+    .replace(/[()\（\）［］【】\[\]　\s:：]/g, "")  // 括弧・空白・コロン除去
+    .toLowerCase();
+
+const hasAll = (h, words) => {
+  const n = hnorm(h);
+  return words.every(w => n.includes(hnorm(w)));
+};
+
+// 電話列（FAX/内線などは除外）
+const pickTelKey = (row) =>
+  Object.keys(row).find(h => {
+    const n = hnorm(h);
+    return n.includes("電話")
+      && !n.includes("fax")
+      && !n.includes("内線")
+      && !n.includes("フリーダイヤル");
+  });
+
+// URL列
+const pickUrlKey = (row) =>
+  Object.keys(row).find(h => {
+    const n = hnorm(h);
+    return n.includes("url") || n.includes("ﾕｰｱｰﾙ") ||
+           n.includes("ﾎｰﾑﾍﾟｰｼﾞ") || n.includes("ホームページ") ||
+           n.includes("hp") || n.includes("web") || n.includes("サイト");
+  });
+
+// 時間CSVの列
+const pickDayKey   = (row) => Object.keys(row).find(h => hnorm(h).includes("曜日"));
+const pickStartKey = (row) => Object.keys(row).find(h => {
+  const n = hnorm(h);
+  return (n.includes("診療") || n.includes("外来受付")) && n.includes("開始");
+});
+const pickEndKey   = (row) => Object.keys(row).find(h => {
+  const n = hnorm(h);
+  return (n.includes("診療") || n.includes("外来受付")) && n.includes("終了");
+});
+
+// 医療CSVから時間・受付・休診系の列をそのまま持ち越す
+const pickMedicalExtras = (row) => {
+  const out = {};
+  for (const [k, v] of Object.entries(row)) {
+    const hk = hnorm(k);
+    if (
+      /時間/.test(k) ||                 // 〜時間（診療時間/外来受付時間/営業時間 等）
+      hk.includes("外来受付") ||
+      hk.includes("診療時間") ||
+      hk.includes("営業時間") ||
+      hk.includes("開局") ||
+      hk.includes("休診") || hk.includes("定休日") ||
+      hk.includes("休業") || hk.includes("休館") ||
+      /毎週決まった曜日|定期休診毎週|定期休業毎週|定期閉店毎週|営業日（|営業日\(/.test(k)
+    ) {
+      out[k] = v;
+    }
+  }
+  return out;
+};
+
 // ============ 部門（診療科） ============
 
 const buildDeptMap = (rows) => {
   const m = new Map();
   for (const r of rows) {
-    const id = String(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
+    const id = normId(firstKey(r, ["医療機関コード","施設ID","機関ID","id","ID"]) || "");
     if (!id) continue;
     const dept = firstKey(r, ["標榜科名","診療科名","診療科","科名","dept"]) || "";
     if (!dept) continue;
@@ -256,11 +329,16 @@ const buildHospital = () => {
   const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
-    const base = normalizeCommon(r);
-    const extra = hoursMap.get(String(base.id)) || {};
-    const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"hospital", departments: depts,
-             tel: base.tel || telMap.get(String(base.id)) || "" };
+    const base   = normalizeCommon(r);
+    const extras = pickMedicalExtras(r);                  // 元列を通す
+    const pivot  = hoursMap.get(String(base.id)) || {};   // 日別HH:MMで上書き
+    const depts  = Array.from(deptMap.get(String(base.id)) || []);
+    return {
+      ...base, ...extras, ...pivot,
+      kind: "hospital",
+      departments: depts,
+      tel: base.tel || telMap.get(String(base.id)) || ""
+    };
   });
   writeByPref("hospital", items);
 };
@@ -277,11 +355,16 @@ const buildClinic = () => {
   const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
-    const base = normalizeCommon(r);
-    const extra = hoursMap.get(String(base.id)) || {};
-    const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"clinic", departments: depts,
-             tel: base.tel || telMap.get(String(base.id)) || "" };
+    const base   = normalizeCommon(r);
+    const extras = pickMedicalExtras(r);
+    const pivot  = hoursMap.get(String(base.id)) || {};
+    const depts  = Array.from(deptMap.get(String(base.id)) || []);
+    return {
+      ...base, ...extras, ...pivot,
+      kind: "clinic",
+      departments: depts,
+      tel: base.tel || telMap.get(String(base.id)) || ""
+    };
   });
   writeByPref("clinic", items);
 };
@@ -299,11 +382,16 @@ const buildDental = () => {
   const telMap   = fHours ? buildTelMap(hoursRows)   : new Map();
 
   const items = info.map(r => {
-    const base = normalizeCommon(r);
-    const extra = hoursMap.get(String(base.id)) || {};
-    const depts = Array.from(deptMap.get(String(base.id)) || []);
-    return { ...base, ...extra, kind:"dental", departments: depts,
-             tel: base.tel || telMap.get(String(base.id)) || "" };
+    const base   = normalizeCommon(r);
+    const extras = pickMedicalExtras(r);
+    const pivot  = hoursMap.get(String(base.id)) || {};
+    const depts  = Array.from(deptMap.get(String(base.id)) || []);
+    return {
+      ...base, ...extras, ...pivot,
+      kind: "dental",
+      departments: depts,
+      tel: base.tel || telMap.get(String(base.id)) || ""
+    };
   });
   writeByPref("dental", items);
 };
