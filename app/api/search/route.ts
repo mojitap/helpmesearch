@@ -95,30 +95,36 @@ const composeFromPairs = (r: any) => {
 // 文中から時間帯（9:00〜18:00 等）を1つ拾う最終手段
 const scanForRange = (r: any) => {
   for (const v of Object.values(r)) {
-    if (typeof v !== "string") continue;
-    const s = toAscii(v);
-    const m = s.match(/([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-]\s*([01]?\d|2[0-3])(?::([0-5]\d))?/);
-    if (m) return m[0].replace(/-/,"〜");
+    if (v == null) continue;
+    const s = toAscii(String(v));     // ★ 数値でも文字列化して判定
+    const hit = s.match(/0\d{9,10}/);
+    if (hit) return hit[0];
   }
   return "";
 };
 
 // ★医療＋介護＋薬局の揺れを広めに
 const readHours = (r: any) =>
+  // ① 薬局の曜日×時間帯 from CSV
+  buildPharmacyHours(r) ||
+  // ② 病院/クリニック/歯科の 診療 or 受付 時間
+  buildDeptHours(r) ||
+  // ③ 単一フィールド候補（既存）
   pickStr(r, [
     // 医療
     "診療時間_平日", "診療時間", "外来診療時間", "外来受付時間",
     "診療受付時間", "通常営業時間",
     // 介護
     "サービス提供時間", "営業日時", "営業時間", "利用時間", "提供時間",
-    // 薬局
+    // 薬局 単項目
     "開局時間", "開局時間_平日",
     "開局時間（平日）","開局時間(平日)","開局時間（月〜金）","開局時間(月〜金)",
     // 英語・その他
     "hours", "opening_hours", "business_hours",
     "営業時間_平日","営業時間（平日）","営業時間(平日)","営業時間 平日",
-    "営業時間（月〜金）","営業時間(月〜金)","受付時間"
+    "営業時間（月〜金）","営業時間(月〜金)","受付時間",
   ]) ||
+  // ④ 曜日別の合体（既存）
   combineDaily(r, [
     ["サービス提供時間_平日","平日"], ["サービス提供時間_土曜","土"], ["サービス提供時間_日曜","日"],
     ["診療時間_平日","平日"], ["診療時間_土曜","土"], ["診療時間_日曜","日"],
@@ -129,10 +135,93 @@ const readHours = (r: any) =>
   composeFromPairs(r) ||
   scanForRange(r);
 
-const readClosed = (r: any) =>
-  pickStr(r, [
-    "休診日","定休日","休業日","休館日","店休日","休日","休み","店休"
-  ]);
+const valIsOne = (v: any) => {
+  const s = String(v ?? "").trim();
+  return s === "1" || /^true$/i.test(s) || s === "○" || s === "◯";
+};
+
+const readClosed = (r: any) => {
+  const closedDays: string[] = [];
+
+  // 病院/クリニック/歯科: 「毎週決まった曜日に休診（X）」に対応
+  (["月","火","水","木","金","土","日"] as DayKey[]).forEach(d => {
+    const keys = [
+      `毎週決まった曜日に休診（${d}）`, `毎週決まった曜日に休診(${d})`,
+      `定期休診毎週（${d}）`,           `定期休診毎週(${d})`,
+      `定期休業毎週（${d}）`,           `定期休業毎週(${d})`,
+      `定期閉店毎週（${d}）`,           `定期閉店毎週(${d})`, // 薬局CSV互換
+    ];
+    const hit = keys.find(k => r?.[k] != null && String(r[k]).trim() !== "");
+    if (hit && valIsOne(r[hit])) closedDays.push(d);
+  });
+
+  // 祝日（病院/クリニック/歯科:「祝日に休診」 / 薬局:「祝日」）
+  const holidayKeys = ["祝日に休診","祝日","祝日に休業","祝日に閉店"];
+  const hKey = holidayKeys.find(k => r?.[k] != null);
+  if (hKey && valIsOne(r[hKey])) closedDays.push("祝");
+
+  // 既存の“定休日/休業日/休診日”文字列も最後に評価
+  const text = pickStr(r, ["休診日","定休日","休業日","休館日","休み"]);
+  if (text) return text; // 文字列で明示されている場合はそのまま
+
+  return closedDays.length ? closedDays.join("・") : "";
+};
+
+// ───── 薬局（曜日×時間帯）専用：日別レンジを集計 ─────
+const DAY_KEYS = ["月","火","水","木","金","土","日","祝"] as const;
+type DayKey = typeof DAY_KEYS[number];
+
+// ── 薬局: 「月_開店時間帯#_開始/終了時間」→ 日別レンジ配列
+function pharmacyDayRanges(r: any, day: DayKey): string[] {
+  const out: string[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const s = r?.[`${day}_開店時間帯${i}_開始時間`];
+    const e = r?.[`${day}_開店時間帯${i}_終了時間`];
+    if (s && e) out.push(`${s}〜${e}`);
+  }
+  return out;
+}
+function buildPharmacyHours(r: any): string {
+  const sig: Record<DayKey,string> = { 月:"",火:"",水:"",木:"",金:"",土:"",日:"",祝:"" };
+  DAY_KEYS.forEach(d => sig[d] = pharmacyDayRanges(r, d).join(" / "));
+  if (!DAY_KEYS.some(d => sig[d])) return "";
+  const weekdaySame = sig["月"] && ["火","水","木","金"].every(d => sig[d as DayKey] === sig["月"]);
+  const parts: string[] = [];
+  if (weekdaySame) parts.push(`平日:${sig["月"]}`);
+  else (["月","火","水","木","金"] as DayKey[]).forEach(d => { if (sig[d]) parts.push(`${d}:${sig[d]}`); });
+  if (sig["土"]) parts.push(`土:${sig["土"]}`);
+  if (sig["日"]) parts.push(`日:${sig["日"]}`);
+  if (sig["祝"]) parts.push(`祝:${sig["祝"]}`);
+  return parts.join(" / ");
+}
+
+// ── 病院/クリニック/歯科: 「月_診療開始/終了時間」または「月_外来受付開始/終了時間」
+function buildDeptHours(r: any): string {
+  const mk = (d: DayKey, a: string, b: string) => {
+    const s = r?.[`${d}_${a}`], e = r?.[`${d}_${b}`];
+    return s && e ? `${s}〜${e}` : "";
+  };
+  // 診療（最優先）
+  const consult: Record<DayKey,string> = { 月:"",火:"",水:"",木:"",金:"",土:"",日:"",祝:"" };
+  DAY_KEYS.forEach(d => consult[d] = mk(d, "診療開始時間", "診療終了時間"));
+  const hasConsult = DAY_KEYS.some(d => consult[d]);
+
+  // 受付（診療が無い場合のフォールバック）
+  const reception: Record<DayKey,string> = { 月:"",火:"",水:"",木:"",金:"",土:"",日:"",祝:"" };
+  DAY_KEYS.forEach(d => reception[d] = mk(d, "外来受付開始時間", "外来受付終了時間"));
+  const sig = hasConsult ? consult : reception;
+  if (!DAY_KEYS.some(d => sig[d])) return "";
+
+  const weekdaySame = sig["月"] && ["火","水","木","金"].every(d => sig[d as DayKey] === sig["月"]);
+  const label = hasConsult ? "" : "受付:";
+  const parts: string[] = [];
+  if (weekdaySame) parts.push(`${label}平日:${sig["月"]}`);
+  else (["月","火","水","木","金"] as DayKey[]).forEach(d => { if (sig[d]) parts.push(`${label}${d}:${sig[d]}`); });
+  if (sig["土"]) parts.push(`${label}土:${sig["土"]}`);
+  if (sig["日"]) parts.push(`${label}日:${sig["日"]}`);
+  if (sig["祝"]) parts.push(`${label}祝:${sig["祝"]}`);
+  return parts.join(" / ");
+}
 
 const readMemo = (r: any) =>
   [
@@ -164,7 +253,7 @@ const readTel = (r: any) => {
   // 3) いずれも無ければ、全フィールドをざっと走査して拾う
   for (const v of Object.values(r)) {
     if (v == null) continue;
-    const s = toAscii(String(v));         // ← 数値も文字列化してから判定
+    const s = toAscii(String(v));
     const hit = s.match(/0\d{9,10}/);
     if (hit) return hit[0];
   }
@@ -193,8 +282,11 @@ const readUrl = (r: any) => {
     "website","Website","web","Web",
     "homepage","HomePage","home_page",
     "リンク","外部リンク","サイト","サイトURL",
-    "ホームページ","ホームページURL","ホームページアドレス","公式サイト","公式サイトURL","公式Web","公式HP","公式ホームページ",
+    "ホームページ","ホームページURL","ホームページアドレス",
+    "公式サイト","公式サイトURL","公式Web","公式HP","公式ホームページ",
     "ＨＰ","HP","HPアドレス","店舗HP","店舗URL","企業HP","企業URL","病院HP","薬局HP","施設HP","園HP",
+    "薬局のホームページアドレス",     // ★ 薬局CSV
+    "案内用ホームページアドレス",       // ★ 病院/クリニック/歯科CSV
   ];
   for (const k of FIRST_KEYS) {
     const v = r?.[k];
