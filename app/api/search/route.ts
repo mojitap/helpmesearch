@@ -40,7 +40,7 @@ const timeText = (r: any) => `${readHours(r)} ${readMemo(r)}`;
 const hasNightByTime = (r: any) => {
   const t = toAscii(timeText(r));
   const pm = /午後|PM/i.test(t);
-  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?::([0-5]\d)|時)/g;
+  const re = /(?:^|[^\d])([01]?\d|2[0-3])(?::([0-5]\d)|時)/g;
   const times = [...t.matchAll(re)].map(m => {
     let h = +m[1]; const mm = m[2] ? +m[2] : 0;
     if (pm && h < 12) h += 12;
@@ -97,10 +97,8 @@ const scanForRange = (r: any) => {
   for (const v of Object.values(r)) {
     if (typeof v !== "string") continue;
     const s = toAscii(v);
-    const m = s.match(
-      /([01]?\d|2[0-3])(?::([0-5]\d))?\s*[〜~\-]\s*([01]?\d|2[0-3])(?::([0-5]\d))?/
-    );
-    if (m) return m[0].replace(/-/, "〜");
+    const m = s.match(/((?:[01]?\d|2[0-3]):[0-5]\d|(?:[01]?\d|2[0-3])時(?:[0-5]\d分)?)\s*[〜~\-]\s*(?:翌|翌日)?((?:[01]?\d|2[0-3]):[0-5]\d|(?:[01]?\d|2[0-3])時(?:[0-5]\d分)?)/);
+    if (m) return m[0].replace(/[-~]/g, "〜");
   }
   return "";
 };
@@ -243,28 +241,65 @@ const readMemo = (r: any) =>
     "夜間","時間外","夜間対応","救急","救急告示","二次救急","三次救急",
   ].map(k => String(r?.[k] ?? "")).join(" ");
 
-// 電話抽出の共通関数（全角/国番号/ハイフン対応）
-const extractTel = (text: string): string => {
-  let d = toAscii(text).replace(/[^\d+]/g, ""); // 数字と+以外を除去
-  if (d.startsWith("+81")) d = "0" + d.slice(3);
-  else if (d.startsWith("81") && d.length >= 11) d = "0" + d.slice(2);
-  const only = d.replace(/[^\d]/g, "");
-  return (only.length === 10 || only.length === 11) ? only : "";
+
+// ───── 電話番号抽出ヘルパ ─────
+const toAsciiPhone = (s: string) =>
+  String(s)
+    // 数字と＋を半角に
+    .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
+    .replace(/＋/g, "+")
+    // すべてのダッシュ/波ダッシュ/長音を "-" に統一
+    .replace(/[‐-‒–—―−ー－〜~]/g, "-")
+    // 括弧類は区切りとしてスペースへ
+    .replace(/[()\（\）\[\]【】]/g, " ");
+
+const normalize81 = (w: string) =>
+  w.replace(/^\+81[\s‐-–—－ー-]*/, "0").replace(/^81[\s‐-–—－ー-]*/, "0");
+
+const extractTel = (raw: string): string => {
+  let s = toAsciiPhone(String(raw));
+  s = normalize81(s);
+
+  // 0で始まるブロック（数字とハイフン含む）を広く拾う
+  const cand = Array.from(s.matchAll(/0\d(?:[\d-]{6,12})\d/g)).map(m => m[0]);
+
+  // 1) 候補にハイフンが含まれていれば、それを正規化して返す
+  for (const c of cand) {
+    const digits = c.replace(/\D/g, "");
+    if (digits.length === 10 || digits.length === 11) {
+      const normalized = c.replace(/[^0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      return normalized;
+    }
+  }
+
+  // 2) だめなら全体から数字だけ拾って 10/11 桁なら整形
+  const only = s.replace(/\D/g, "");
+  if (only.length === 11) {
+    // 携帯/050などは 3-4-4
+    return `${only.slice(0,3)}-${only.slice(3,7)}-${only.slice(7)}`;
+  }
+  if (only.length === 10) {
+    // 地方局番は本来2/3/4桁と揺れますが、ソースにハイフンがあることが多いので
+    // フォールバックとして 3-3-4 を採用（ソースにハイフンがあれば上で保持）
+    return `${only.slice(0,3)}-${only.slice(3,6)}-${only.slice(6)}`;
+  }
+  return "";
 };
 
 // 電話番号（複数・国番号対応：最初の1番号だけ抽出）
 const readTel = (r: any) => {
   const raw = pickStr(r, [
     "tel","TEL","Tel","電話","電話番号","代表電話","連絡先","連絡先電話番号",
-    "phone","Phone","TEL1","TEL２","TEL_1","TEL_2","電話番号１","電話番号2"
+    "phone","Phone","TEL1","TEL２","TEL_1","TEL_2","TEL-1","TEL-2",
+    "電話1","電話２","TEL（代表）" // 任意で拡張
   ]);
   if (raw) {
     const hit = extractTel(raw);
     if (hit) return hit;
   }
-  // どのキーにも無ければ全フィールドをざっと走査
-  for (const v of Object.values(r)) {
+  for (const [k, v] of Object.entries(r)) {
     if (v == null) continue;
+    if (/fax|ＦＡＸ/i.test(k)) continue;           // ★ FAXを除外
     const hit = extractTel(String(v));
     if (hit) return hit;
   }
@@ -347,7 +382,7 @@ const hasEmergencyMark = (r: any) => EMERGENCY_RE.test(agg(r));
 const nightTail = (text: string) => {
   const t = toAscii(text);
   const pm = /午後|PM/i.test(t);
-  const re = /(?:^|[^\d])(2[0-3]|1?\d)(?::([0-5]\d)|時)/g;
+  const re = /(?:^|[^\d])([01]?\d|2[0-3])(?::([0-5]\d)|時)/g;
   const mins = [...t.matchAll(re)].map(m => {
     let h = +m[1]; const mm = m[2] ? +m[2] : 0;
     if (pm && h < 12) h += 12;
