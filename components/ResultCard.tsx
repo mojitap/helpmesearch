@@ -74,7 +74,21 @@ export default function ResultCard({ item }: { item: Item }) {
       </div>
 
       {/* アクション／タグ */}
+      // アクション／タグ
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        {item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 hover:bg-neutral-50"
+          >
+            <span aria-hidden>🌐</span> Webサイト
+          </a>
+        ) : (
+          <span className="rounded border px-2 py-1 text-neutral-500">Webサイト -</span>
+        )}
+
         {phone ? (
           <a
             href={telHref(item.tel)}
@@ -86,6 +100,7 @@ export default function ResultCard({ item }: { item: Item }) {
         ) : (
           <span className="rounded border px-2 py-1 text-neutral-500">電話番号 -</span>
         )}
+
         {(item.tags ?? []).slice(0, 4).map((t) => (
           <span key={t} className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">
             {t}
