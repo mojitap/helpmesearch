@@ -1,82 +1,89 @@
-// components/AdSlot.tsx
 "use client";
 
+import Script from "next/script";
 import { useEffect, useId } from "react";
 
-type Variant = "leaderboard" | "sidebar" | "infeed" | "rectangle";
+type Variant = "leaderboard" | "rectangle" | "infeed" | "sidebar";
 type Props = {
-  /** AdSense の slot id（例: 1234567890）*/
-  slotId?: string;
-  /** レイアウトに応じた推奨サイズ */
+  client?: string; // 例: NEXT_PUBLIC_ADSENSE_CLIENT
+  slot?: string;   // 例: NEXT_PUBLIC_ADSENSE_SLOT_*
   variant?: Variant;
-  /** 追加の className（余白調整など） */
   className?: string;
-  /** ラベル（アクセシビリティ用） */
-  label?: string;
+  style?: React.CSSProperties;
+  /** 開発中もダミー枠を見たいときだけ true。既定は非表示 */
+  showPlaceholder?: boolean;
 };
 
-/**
- * AdSense を前提とした広告コンポーネント。
- * - `NEXT_PUBLIC_ADSENSE_CLIENT` を設定すると script を自動ロード
- * - `slotId` が無い場合/クライアントIDが無い場合は何も描画しない（プレースホルダも無し）
- */
 export default function AdSlot({
-  slotId,
+  client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT,
+  slot,
   variant = "leaderboard",
-  className = "",
-  label = "広告",
+  className,
+  style,
+  showPlaceholder = false,
 }: Props) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT; // 例: ca-pub-xxxxxxxxxxxxxxxx
-  const domId = useId();
+  const id = useId();
 
-  // 必須情報がなければ描画しない（ダミーテキストは出さない）
-  if (!client || !slotId) return null;
+  // スロットIDを variant から自動選択（省力化）
+  const autoSlot =
+    slot ??
+    (variant === "leaderboard"
+      ? process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADER
+      : variant === "sidebar"
+      ? process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR
+      : process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED);
 
-  useEffect(() => {
-    // スクリプトが未挿入なら 1回だけ読み込み
-    const already = document.querySelector<HTMLScriptElement>('script[data-adsbygoogle="loaded"]');
-    if (!already) {
-      const s = document.createElement("script");
-      s.async = true;
-      s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
-      s.crossOrigin = "anonymous";
-      s.setAttribute("data-adsbygoogle", "loaded");
-      document.head.appendChild(s);
-    }
-
-    // レンダリング後に push
-    // @ts-ignore
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-  }, [client, slotId]);
-
-  // 推奨スタイル（レスポンシブ）
-  const style: React.CSSProperties = { display: "block" };
-  switch (variant) {
-    case "leaderboard": // 728x90 / 970x90 / レスポンシブ
-      style.minHeight = 90;
-      break;
-    case "sidebar": // 300x250 / 300x600 / レスポンシブ
-      style.minHeight = 250;
-      break;
-    case "infeed": // 横幅に応じて可変
-      style.minHeight = 180;
-      break;
-    case "rectangle": // 336x280 / 300x250
-      style.minHeight = 250;
-      break;
+  // env が無ければ「何も出さない」＝プレースホルダー非表示
+  if (!client || !autoSlot) {
+    if (!showPlaceholder) return null;
+    const base =
+      variant === "leaderboard" ? "h-[90px]" :
+      variant === "sidebar"     ? "h-[600px] w-[300px] mx-auto" :
+      variant === "rectangle"   ? "h-[250px]" : "h-[180px]";
+    return (
+      <div
+        className={`w-full ${base} rounded-xl border border-dashed border-neutral-300
+                    bg-neutral-50 grid place-items-center text-neutral-400 ${className || ""}`}
+        style={style}
+        aria-label="Ad placeholder"
+      >
+        AD
+      </div>
+    );
   }
 
+  useEffect(() => {
+    try {
+      // @ts-ignore
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {}
+  }, [client, autoSlot, variant]);
+
+  const sizeStyle: React.CSSProperties =
+    variant === "leaderboard"
+      ? { minHeight: 90 }
+      : variant === "sidebar"
+      ? { minHeight: 600, width: 300, margin: "0 auto" }
+      : variant === "rectangle"
+      ? { minHeight: 250 }
+      : { minHeight: 180 }; // infeed
+
   return (
-    <div className={className} aria-label={label}>
+    <>
+      <Script
+        id={`adsense-init-${id}`}
+        strategy="afterInteractive"
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
+        crossOrigin="anonymous"
+      />
       <ins
-        key={domId}
-        className="adsbygoogle"
-        style={style}
+        className={`adsbygoogle block ${className || ""}`}
+        style={{ display: "block", ...sizeStyle, ...style }}
         data-ad-client={client}
-        data-ad-slot={slotId}
+        data-ad-slot={autoSlot}
         data-ad-format="auto"
         data-full-width-responsive="true"
       />
-    </div>
+    </>
   );
 }
