@@ -37,11 +37,7 @@ export default function Region8Page() {
       </div>
 
       {/* 下部広告 */}
-      <AdSlot
-        variant="infeed"
-        slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED}
-        className="my-10"
-      />
+      <AdSlot variant="infeed" className="my-10" />
     </main>
   );
 }
