@@ -22,11 +22,7 @@ export default function Region8Page() {
       <p className="mt-1 text-center text-sm text-neutral-600">{prefs.length}件の都道府県</p>
 
       {/* 上部広告 */}
-      <AdSlot
-        variant="leaderboard"
-        slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADER}
-        className="my-6"
-      />
+      <AdSlot variant="leaderboard" className="my-6" />
 
       <div className="mx-auto mt-2 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {prefs.map((p) => (
