@@ -4,9 +4,9 @@
 import Header from "@/components/Header";
 import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
-import { useState } from "react";
+import RegionNav from "@/components/RegionNav";
 import AdSlot from "@/components/AdSlot";
-import PrefTileMap from "@/components/PrefTileMap"; // ← 追加（地方ナビ）
+import { useState } from "react";
 
 type Item = {
   id: string;
@@ -22,11 +22,8 @@ type Item = {
   closed?: string;
 };
 
-// 既存ロジックはそのまま
 const toAscii = (s: string) =>
-  (s || "")
-    .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
-    .replace(/：/g, ":");
+  (s || "").replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/：/g, ":");
 
 function pickNightTail(raw?: string): string | null {
   if (!raw) return null;
@@ -34,9 +31,7 @@ function pickNightTail(raw?: string): string | null {
   const pm = /午後|PM/i.test(t);
   const re = /(?:^|[^\d])(2[0-3]|1?\d)(?:[:：]([0-5]\d)|時)/g;
   const mins = [...t.matchAll(re)].map(m => {
-    let h = +m[1];
-    const mm = m[2] ? +m[2] : 0;
-    if (pm && h < 12) h += 12;
+    let h = +m[1]; const mm = m[2] ? +m[2] : 0; if (pm && h < 12) h += 12;
     return h * 60 + mm;
   });
   const max = Math.max(...mins, -1);
@@ -49,38 +44,26 @@ function pickNightTail(raw?: string): string | null {
 }
 
 function deriveDisplayFields(x: any) {
-  const hours =
-    x["診療時間_平日"] ??
-    x["診療時間"] ??
-    x.hours ?? x.opening_hours ?? x.business_hours ?? x["営業時間"] ?? "";
-
+  const hours = x["診療時間_平日"] ?? x["診療時間"] ?? x.hours ?? x.opening_hours ?? x.business_hours ?? x["営業時間"] ?? "";
   const memoLike = `${x["備考"] ?? ""} ${x["注記"] ?? ""} ${x["特記事項"] ?? ""} ${x["夜間"] ?? ""} ${x["時間外"] ?? ""} ${x["夜間対応"] ?? ""}`;
   const nightTail  = pickNightTail(`${hours} ${memoLike}`);
   const nightMark  = /(夜|夜診|準夜|夜間|深夜|時間外|当直|24 ?時間|夜間診療|夜間受付|夜間救急|休日夜間)/i.test(`${hours} ${memoLike}`);
   const nightLabel = nightTail ?? (nightMark ? "対応あり" : "");
-  const closed =
-    x["休診日"] ?? x["定休日"] ?? x["休業日"] ?? x["休み"] ?? "";
-
+  const closed = x["休診日"] ?? x["定休日"] ?? x["休業日"] ?? x["休み"] ?? "";
   return { hours, nightLabel, closed };
 }
 
-// 既存の coerceItem（先に x を優先する方針）は維持
 const coerceItem = (x: any): Item => ({
-  id:
-    x.id ??
-    `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
+  id: x.id ?? `${x.pref || ""}-${x.city || ""}-${x.name || x.facility_name || x.office_name || ""}-${x.address || ""}`.replace(/\s+/g, ""),
   name: x.name ?? x.facility_name ?? x.office_name ?? x["施設名"] ?? x["事業所名"] ?? "名称不明",
   kind: x.kind ?? x.kindLabel ?? x.service ?? x.category ?? "",
   tel: x.tel ?? x["電話"] ?? x["TEL"],
   address: x.address ?? x["住所"] ?? "",
   url: x.url ?? x.website ?? x.homepage ?? x["URL"] ?? x["HP"],
   pref: x.pref ?? x["都道府県"],
-  hours: x.hours ?? "",
-  nightLabel: x.nightLabel ?? "",
-  closed: x.closed ?? "",
+  ...deriveDisplayFields(x),
 });
 
-// トップの特集ボタン
 const PICKUP: Array<{label:string; q?:string; kind?:string}> = [
   { label:"夜間・救急",   q:"夜間 救急", kind:"hospital" },
   { label:"在宅・訪問",   q:"訪問診療",   kind:"clinic"   },
@@ -98,7 +81,6 @@ export default function Page() {
   const [results, setResults] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 既存の handleSearch をそのまま利用（差分はありません）
   async function handleSearch(params: { keyword: string; pref?: string; city?: string; category?: string }) {
     setLoading(true);
     const qs = new URLSearchParams();
@@ -115,21 +97,34 @@ export default function Page() {
   return (
     <>
       <Header />
-      <main id="main">
-        <SearchHero onSearch={handleSearch} />
-
-        {/* ヒーロー直下のリーダーボード広告（env 未設定ならダミー枠） */}
-        <div className="mx-auto max-w-5xl px-4">
-          <AdSlot variant="leaderboard" />
+      <main id="main" className="mx-auto max-w-6xl">
+        <div className="px-4">
+          <h1 className="mt-6 text-center text-3xl font-extrabold sm:text-4xl">介護・医療をまとめて検索</h1>
+          <p className="mt-2 text-center text-sm text-neutral-600">
+            都道府県・市区町村・業種で絞り込んでから、必要ならキーワードで検索できます。
+          </p>
         </div>
 
-        {/* 2カラム構成：左=コンテンツ、右=サイドバー */}
+        <div className="mt-4">
+          <SearchHero onSearch={handleSearch} />
+        </div>
+
+        {/* 上部リーダーボード広告（環境変数があれば表示） */}
+        <div className="mx-auto max-w-5xl px-4">
+          <AdSlot
+            variant="leaderboard"
+            slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADER}
+            className="my-6"
+          />
+        </div>
+
+        {/* 2カラム：メイン＋サイドバー（スマホは1カラム） */}
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 md:grid-cols-[1fr_320px]">
           <section className="space-y-6">
-            {/* 検索結果が出るまでは地方ナビを表示 */}
-            {!results && <PrefTileMap mode="region" />}
+            {/* 検索結果が出るまでは“地方ナビ”を出す */}
+            {!results && <RegionNav />}
 
-            {/* 業種・用途から探す */}
+            {/* 業種・用途から探す（カード） */}
             {!results && (
               <div className="rounded-2xl border border-black/10 bg-white p-4">
                 <h2 className="mb-3 text-lg font-bold">業種・用途から探す</h2>
@@ -147,7 +142,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* 人気キーワード */}
+            {/* 人気キーワード（チップ） */}
             {!results && (
               <div className="rounded-2xl border border-black/10 bg-white p-4">
                 <h2 className="mb-3 text-lg font-bold">人気キーワード</h2>
@@ -165,8 +160,14 @@ export default function Page() {
               </div>
             )}
 
-            {/* in-feed 広告（結果の前に1枠） */}
-            {!results && <AdSlot variant="infeed" />}
+            {/* 本文途中（インフィード） */}
+            {!results && (
+              <AdSlot
+                variant="infeed"
+                slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED}
+                className="my-4"
+              />
+            )}
 
             {/* 検索結果 */}
             <section aria-live="polite" className="grid gap-3">
@@ -182,18 +183,19 @@ export default function Page() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {results.map((r) => (
-                    <ResultCard key={r.id} item={r} />
-                  ))}
+                  {results.map((r) => <ResultCard key={r.id} item={r} />)}
                 </div>
               )}
             </section>
           </section>
 
-          {/* サイドバー（広告＋ガイド） */}
+          {/* サイドバー */}
           <aside className="space-y-4">
             <div className="sticky top-4 space-y-4">
-              <AdSlot variant="sidebar" />
+              <AdSlot
+                variant="sidebar"
+                slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR}
+              />
               <div className="rounded-2xl border border-black/10 bg-white p-4">
                 <h3 className="mb-2 font-bold">お役立ちガイド</h3>
                 <ul className="space-y-1 text-sm text-blue-700">
