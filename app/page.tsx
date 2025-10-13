@@ -6,7 +6,7 @@ import SearchHero from "@/components/SearchHero";
 import ResultCard from "@/components/ResultCard";
 import { useState } from "react";
 import AdSlot from "@/components/AdSlot";
-import PrefTileMap from "@/components/PrefTileMap";
+import RegionNav from "@/components/RegionNav";
 
 type Item = {
   id: string;
@@ -59,48 +59,40 @@ export default function Page() {
     <>
       <Header />
       <main id="main">
-        <SearchHero onSearch={handleSearch} />
 
-        {/* 上部リーダーボード（env未設定なら AdSlot は何も描画しません） */}
-        <div className="mx-auto max-w-5xl px-4">
-          <AdSlot variant="leaderboard" slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADER} />
+        {/* ヒーローと上部広告を 1 カラムで中央寄せ */}
+        <div className="mx-auto max-w-6xl px-4">
+          <SearchHero onSearch={handleSearch} />
+          <AdSlot variant="leaderboard" />
         </div>
 
-        {/* 中央寄せ 2カラム：左=本体 / 右=サイド広告（スマホは1カラム） */}
-        <div className="mx-auto max-w-6xl px-4 py-8 grid grid-cols-1 gap-6 md:grid-cols-[1fr_320px]">
-          <section className="space-y-6">
-            {/* 結果が出るまで8地方ナビだけ表示 */}
-            {!results && <PrefTileMap mode="region" />}
+        {/* 検索結果がまだ無ければ 8 地方の大ボタンを表示 */}
+        {!results && (
+          <div className="mx-auto max-w-6xl px-4 py-8">
+            <RegionNav />
+          </div>
+        )}
 
-            {/* 検索結果 */}
-            <section aria-live="polite" className="grid gap-3">
-              {loading ? (
-                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
-                  検索中…
-                </div>
-              ) : !results ? (
-                <></>
-              ) : results.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
-                  該当する施設が見つかりませんでした。
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {results.map((r) => (
-                    <ResultCard key={r.id} item={r} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </section>
-
-          {/* サイドバーは広告のみ（ガイドは削除） */}
-          <aside className="space-y-4">
-            <div className="sticky top-4">
-              <AdSlot variant="sidebar" slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR} />
+        {/* 検索結果 */}
+        <section aria-live="polite" className="mx-auto max-w-6xl px-4 pb-16">
+          {loading ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
+              検索中…
             </div>
-          </aside>
-        </div>
+          ) : !results ? (
+            <></>
+          ) : results.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-neutral-500">
+              該当する施設が見つかりませんでした。
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {results.map((r) => (
+                <ResultCard key={r.id} item={r} />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </>
   );
