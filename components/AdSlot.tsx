@@ -1,78 +1,82 @@
+// components/AdSlot.tsx
 "use client";
 
-import Script from "next/script";
 import { useEffect, useId } from "react";
 
-type Variant = "leaderboard" | "rectangle" | "infeed" | "sidebar";
+type Variant = "leaderboard" | "sidebar" | "infeed" | "rectangle";
 type Props = {
-  /** 例: "ca-pub-xxxxxxxxxxxxxxxx"。env が無ければプレースホルダー表示 */
-  client?: string;
-  /** 例: "1234567890"（広告ユニット） */
-  slot?: string;
+  /** AdSense の slot id（例: 1234567890）*/
+  slotId?: string;
+  /** レイアウトに応じた推奨サイズ */
   variant?: Variant;
+  /** 追加の className（余白調整など） */
   className?: string;
-  style?: React.CSSProperties;
+  /** ラベル（アクセシビリティ用） */
+  label?: string;
 };
 
+/**
+ * AdSense を前提とした広告コンポーネント。
+ * - `NEXT_PUBLIC_ADSENSE_CLIENT` を設定すると script を自動ロード
+ * - `slotId` が無い場合/クライアントIDが無い場合は何も描画しない（プレースホルダも無し）
+ */
 export default function AdSlot({
-  client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT,
-  slot = process.env.NEXT_PUBLIC_ADSENSE_SLOT, // 置き換え可
+  slotId,
   variant = "leaderboard",
-  className,
-  style,
+  className = "",
+  label = "広告",
 }: Props) {
-  const id = useId();
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT; // 例: ca-pub-xxxxxxxxxxxxxxxx
+  const domId = useId();
 
-  // env 未設定ならダミー枠を表示（デザイン保持用）
-  if (!client || !slot) {
-    const base =
-      variant === "leaderboard" ? "h-[90px]" :
-      variant === "sidebar"     ? "h-[600px]" :
-      variant === "rectangle"   ? "h-[250px]" : "h-[180px]";
-    return (
-      <div
-        className={`w-full ${base} min-h-[90px] rounded-xl border border-dashed border-neutral-300 bg-neutral-50 grid place-items-center text-neutral-400 ${className || ""}`}
-        style={style}
-        aria-label="Ad placeholder"
-      >
-        AD
-      </div>
-    );
+  // 必須情報がなければ描画しない（ダミーテキストは出さない）
+  if (!client || !slotId) return null;
+
+  useEffect(() => {
+    // スクリプトが未挿入なら 1回だけ読み込み
+    const already = document.querySelector<HTMLScriptElement>('script[data-adsbygoogle="loaded"]');
+    if (!already) {
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+      s.crossOrigin = "anonymous";
+      s.setAttribute("data-adsbygoogle", "loaded");
+      document.head.appendChild(s);
+    }
+
+    // レンダリング後に push
+    // @ts-ignore
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
+  }, [client, slotId]);
+
+  // 推奨スタイル（レスポンシブ）
+  const style: React.CSSProperties = { display: "block" };
+  switch (variant) {
+    case "leaderboard": // 728x90 / 970x90 / レスポンシブ
+      style.minHeight = 90;
+      break;
+    case "sidebar": // 300x250 / 300x600 / レスポンシブ
+      style.minHeight = 250;
+      break;
+    case "infeed": // 横幅に応じて可変
+      style.minHeight = 180;
+      break;
+    case "rectangle": // 336x280 / 300x250
+      style.minHeight = 250;
+      break;
   }
 
-  // AdSense 本体
-  useEffect(() => {
-    try {
-      // @ts-ignore
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {}
-  }, [client, slot, variant]);
-
-  const sizeStyle: React.CSSProperties =
-    variant === "leaderboard"
-      ? { minHeight: 90 }
-      : variant === "sidebar"
-      ? { minHeight: 600, width: 300, margin: "0 auto" }
-      : variant === "rectangle"
-      ? { minHeight: 250 }
-      : { minHeight: 180 }; // infeed
-
   return (
-    <>
-      <Script
-        id={`adsense-init-${id}`}
-        strategy="afterInteractive"
-        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
-        crossOrigin="anonymous"
-      />
+    <div className={className} aria-label={label}>
       <ins
-        className={`adsbygoogle block ${className || ""}`}
-        style={{ display: "block", ...sizeStyle, ...style }}
+        key={domId}
+        className="adsbygoogle"
+        style={style}
         data-ad-client={client}
-        data-ad-slot={slot}
+        data-ad-slot={slotId}
         data-ad-format="auto"
         data-full-width-responsive="true"
       />
-    </>
+    </div>
   );
 }
