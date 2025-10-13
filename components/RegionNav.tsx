@@ -1,35 +1,45 @@
-// components/RegionNav.tsx
 "use client";
 
 import Link from "next/link";
 import { REG8_LABEL, type Region8Key } from "@/app/lib/jp";
 
 const ORDER: Region8Key[] = [
-  "hokkaido","tohoku","kanto","chubu","kinki","chugoku","shikoku","kyushu",
+  "hokkaido", "tohoku", "kanto", "chubu",
+  "kinki", "chugoku", "shikoku", "kyushu",
 ];
 
+// 地方色（東北=青 / 関東=黄）
 const COLORS: Record<Region8Key, string> = {
-  hokkaido:"#7ACB7A", tohoku:"#5DA8E8", kanto:"#F4D35E", chubu:"#F29B77",
-  kinki:"#60C2C9", chugoku:"#A58AD8", shikoku:"#9DA4F0", kyushu:"#E89AB5",
+  hokkaido: "#7ACB7A",
+  tohoku:   "#5DA8E8",
+  kanto:    "#F4D35E",
+  chubu:    "#F29B77",
+  kinki:    "#60C2C9",
+  chugoku:  "#A58AD8",
+  shikoku:  "#9DA4F0",
+  kyushu:   "#E89AB5",
 };
 
-export default function RegionNav() {
+export default function RegionNav({ className = "" }: { className?: string }) {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8">
-      <h2 className="mb-4 text-center text-xl font-bold">エリアから探す</h2>
-      <ul className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
-        {ORDER.map((k) => (
-          <li key={k}>
+    <nav className={`mx-auto w-full max-w-5xl ${className}`}>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {ORDER.map((key) => (
+          <li key={key}>
             <Link
-              href={`/region8/${k}`}
-              style={{ backgroundColor: COLORS[k] }}
-              className="block rounded-xl px-4 py-6 text-center text-base font-semibold text-white shadow-sm outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-black/30 sm:text-lg"
+              href={`/region8/${key}`}
+              style={{ backgroundColor: COLORS[key] }}
+              className="block min-h-[64px] rounded-2xl border border-black/10 p-4
+                         text-center text-base font-semibold text-white shadow-sm
+                         hover:shadow-md focus-visible:outline-none focus-visible:ring-2
+                         focus-visible:ring-blue-400 sm:text-lg"
+              aria-label={REG8_LABEL[key]}
             >
-              {REG8_LABEL[k]}
+              {REG8_LABEL[key]}
             </Link>
           </li>
         ))}
       </ul>
-    </section>
+    </nav>
   );
 }
